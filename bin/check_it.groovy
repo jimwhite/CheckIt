@@ -22,8 +22,7 @@ try {
 
 def get_slave()
 {
-    File data_dir = new File("/home2/jimwhite/Projects/CheckIt")
-    //File data_dir = new File("/home2/ling572_00/Projects/CheckIt")
+    File data_dir = new File("/home2/ling572_00/Projects/CheckIt")
 
     for (slave_number in 1..9) {
         String slave_id = "ling572_0$slave_number"
