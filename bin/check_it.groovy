@@ -1,8 +1,12 @@
-#!/usr/bin/env -i PATH=/usr/bin:/bin /home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin/groovy
+#!/usr/bin/env /home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin/groovy
 
-//System.getenv().each { println it }
+println (["id"].execute().text)
 
-//System.properties.each { println it }
+// println (new File("/home2/ling572_00/.ssh/checkit").text)
+
+System.getenv().each { println it }
+
+System.properties.each { println it }
 
 slave = null
 
@@ -22,7 +26,7 @@ try {
 
 def get_slave()
 {
-    File data_dir = new File("/home2/ling572_00/Projects/CheckIt")
+    File data_dir = new File("/home2/ling572_00/CheckIt")
 
     for (slave_number in 1..9) {
         String slave_id = "ling572_0$slave_number"
@@ -39,7 +43,8 @@ def get_slave()
 
 def use_slave(slave, args)
 {
-    def identity_file = new File(System.getProperty("user.home"), ".ssh/checkit")
+//    def identity_file = new File(System.getProperty("user.home"), ".ssh/checkit")
+    def identity_file = new File("/home2/ling572_00/.ssh/checkit")
     def command = ["ssh", "-i", identity_file, slave.id + "@patas.ling.washington.edu", *args]
 
     def done = false
