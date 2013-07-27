@@ -4,37 +4,61 @@
 
 //System.properties.each { println it }
 
-data_dir = new File("/home2/jimwhite/Projects/CheckIt")
-//data_dir = new File("/home2/ling572_00/Projects/CheckIt")
+slave = null
 
-lock_file = new RandomAccessFile(new File(data_dir, "lock.file"), "rw")
+try {
+    slave = get_slave()
 
-lock = null
-
-println "Howdy!"
-
-println data_dir.absolutePath
-
-if (get_lock()) {
-    println "Got It!"
-
-    20.times { print "." ; sleep(1000) }
-
-    lock.release()
-
-    println " Done!"
-} else {
-    println "Don't got it!"
+    if (slave == null) {
+        println "All slaves are busy.  Please try again later."
+    } else {
+        println "Got One!"
+        use_slave(slave, args)
+        println "Done!"
+    }
+} finally {
+    if (slave != null) slave.lock.release()
 }
 
-def get_lock()
+def get_slave()
 {
-    def attempts = 3
+    File data_dir = new File("/home2/jimwhite/Projects/CheckIt")
+    //File data_dir = new File("/home2/ling572_00/Projects/CheckIt")
 
-    while (lock == null && (lock = lock_file.channel.tryLock()) == null && attempts-- > 0) {
-        println "Lock busy.  Will retry..."
-        sleep(1000)
+    for (slave_number in 1..9) {
+        String slave_id = "ling572_0$slave_number"
+        def slave_home = new File("/home2", slave_id)
+        def lock_file = new RandomAccessFile(new File(data_dir, slave_id + ".lock"), "rw")
+        def lock = lock_file.channel.tryLock()
+        if (lock != null) {
+            return [id:slave_id, home:slave_home, lock:lock]
+        }
     }
 
-    lock
+    return null
+}
+
+def use_slave(slave, args)
+{
+    def identity_file = new File(System.getProperty("user.home"), ".ssh/checkit")
+    def command = ["ssh", "-i", identity_file, slave.id + "@patas.ling.washington.edu", *args]
+
+    def done = false
+
+    def proc = command.execute()
+
+//    proc.withWriter { stdin ->
+//       def c
+//       while (!done && (c = System.in.read()) >= 0) {
+//           stdin.write(c)
+//       }
+//    }
+
+    proc.consumeProcessOutput(System.out, System.err)
+    proc.waitFor()
+
+    done = true
+
+    println()
+    println "exitValue = ${proc.exitValue()}"
 }
