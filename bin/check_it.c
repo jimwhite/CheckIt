@@ -1,17 +1,27 @@
 #include <stdio.h>  
 #include <unistd.h>  
+#include <stdlib.h>
   
 int main(int argc, char** argv) {  
-    const char * envp[2];
-    envp[0] = "PATH=/bin:/usr/bin";
-    envp[1] = 0;
-    int errno = 0;
-    errno = setreuid(geteuid(), geteuid());
+    int errno = setreuid(geteuid(), geteuid());
 //    errno = execle("/usr/bin/id", (char *) 0, envp);  
     if (errno == 0) {
-       errno = execle("/home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin/groovy", "-f", "/home2/ling572_00/CheckIt/bin/check_it.groovy", "ls ; env", (char *) 0, envp);  
-//       errno = execle("/home2/ling572_00/CheckIt/bin/howdy.sh", (char *) 0, envp);  
+       char * envp[] = { "PATH=/bin:/usr/bin", (char *) 0 };
+       char ** gargv = (char **) calloc((argc + 3), sizeof(char *));
+       
+       gargv[0] = "/home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin/groovy";
+       gargv[1] = "/home2/ling572_00/CheckIt/bin/check_it.groovy";
+       
+       int i;
+       for (i = 1; i < argc; ++i) gargv[i + 1] = argv[i];
+       
+       for (i = 0; envp[i] ; ++i) printf("env[%d] : %s\n", i, envp[i]);
+       for (i = 0; gargv[i]; ++i) printf("argv[%d] : %s\n", i, gargv[i]);
+       
+       errno = execve(gargv[0], gargv, envp);  
     }
-    if (errno != 0) printf("An error occured %d\n", errno);  
+
+    printf("An error occured %d\n", errno);  
+
     return errno;  
 }  
