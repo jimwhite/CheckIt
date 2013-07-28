@@ -1,12 +1,16 @@
 #!/usr/bin/env /home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin/groovy
 
-println (["id"].execute().text)
+//println (["id"].execute().text)
 
 // println (new File("/home2/ling572_00/.ssh/checkit").text)
 
-System.getenv().each { println it }
+//System.getenv().each { println it }
 
-System.properties.each { println it }
+//System.properties.each { println it }
+
+check_it_home = new File("/home2/ling572_00/Projects/CheckIt/")
+check_it_binaries = new File(check_it_home, "bin")
+runners = ["project0":"project0.groovy", "project1":"project1.groovy"]
 
 slave = null
 
@@ -16,9 +20,14 @@ try {
     if (slave == null) {
         println "All slaves are busy.  Please try again later."
     } else {
-        println "Got One!"
-        use_slave(slave, args)
-        println "Done!"
+//        println "Got One!"
+
+        def runner = runners[args[0]]
+        def runner_exe = new File(check_it_binaries, runner)
+
+        use_slave(slave, [runner_exe.absolutePath, args[0], new File(args[1]).absolutePath])
+
+//        println "Done!"
     }
 } finally {
     if (slave != null) slave.lock.release()
@@ -26,7 +35,7 @@ try {
 
 def get_slave()
 {
-    File data_dir = new File("/home2/ling572_00/CheckIt")
+    File data_dir = new File("/home2/ling572_00/Projects/CheckIt/data")
 
     for (slave_number in 1..9) {
         String slave_id = "ling572_0$slave_number"
