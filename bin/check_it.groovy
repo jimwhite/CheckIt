@@ -15,19 +15,26 @@ runners = ["project0":"project0.groovy", "project1":"project1.groovy"]
 slave = null
 
 try {
-    slave = get_slave()
-
-    if (slave == null) {
-        println "All slaves are busy.  Please try again later."
+    if (args.size() != 2) {
+        println "Usage: check_it <project_id> <project_tar_file>"
     } else {
-//        println "Got One!"
+       slave = get_slave()
 
-        def runner = runners[args[0]]
-        def runner_exe = new File(check_it_binaries, runner)
+       if (slave == null) {
+          println "All slaves are busy.  Please try again later."
+       } else {
+	//        println "Got One!"
 
-        use_slave(slave, [runner_exe.absolutePath, args[0], new File(args[1]).absolutePath])
-
-//        println "Done!"
+          def runner = runners[args[0]]
+          if (runner == null) {
+             println "Unknown project id : ${args[0]}"
+          } else {
+             def runner_exe = new File(check_it_binaries, runner)
+  
+             use_slave(slave, [runner_exe.absolutePath, args[0], new File(args[1]).absolutePath])
+          }
+	//        println "Done!"
+       }
     }
 } finally {
     if (slave != null) slave.lock.release()
@@ -35,7 +42,7 @@ try {
 
 def get_slave()
 {
-    File data_dir = new File("/home2/ling572_00/Projects/CheckIt/data")
+    File data_dir = new File(check_it_home, "data")
 
     for (slave_number in 1..9) {
         String slave_id = "ling572_0$slave_number"

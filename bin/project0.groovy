@@ -2,4 +2,5 @@
 
 println args
 
+println System.getProperty('user.dir')
 println new File(args[1]).exists()
