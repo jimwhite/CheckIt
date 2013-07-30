@@ -1,13 +1,18 @@
 #!/usr/bin/env groovy
 
-System.in.withReader { reader ->
-    System.out.withWriter { writer ->
-        def printer = new IndentWriter(writer)
-        def sexpr
-        while ((sexpr = read_one_sexp(reader)) != null) {
-            printer.println()
-            printTree(sexpr, printer)
-            printer.println()
+args.each {
+    new File(it).withReader { reader ->
+        if (args.size() > 1) {
+            println "=== $it ==="
+        }
+        System.out.withWriter { writer ->
+            def printer = new IndentWriter(writer)
+            def sexpr
+            while ((sexpr = read_one_sexp(reader)) != null) {
+                printer.println()
+                printTree(sexpr, printer)
+                printer.println()
+            }
         }
     }
 }
@@ -61,6 +66,16 @@ List read_one_sexp(Reader reader)
             case '(':
                 stack.push(sexprs)
                 sexprs = []
+                break
+
+            case '"':
+                def str = new StringBuilder()
+                while ((cint = reader.read()) >= 0) {
+                    if (cint == '"') break
+                    if (cint == '\\') cint = reader.read()
+                    str.append(cint as Character)
+                }
+                sexprs << str.toString()
                 break
 
             default:
