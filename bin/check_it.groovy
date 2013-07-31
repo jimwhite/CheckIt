@@ -15,8 +15,8 @@ runners = ["project0":"project0.groovy", "project1":"project1.groovy"]
 slave = null
 
 try {
-    if (args.size() != 2) {
-        println "Usage: check_it <project_id> <project_tar_file>"
+    if (args.size() < 1) {
+        println "Usage: check_it <project_id>"
     } else {
        slave = get_slave()
 
@@ -31,7 +31,7 @@ try {
           } else {
              def runner_exe = new File(check_it_binaries, runner)
   
-             use_slave(slave, [runner_exe.absolutePath, args[0], new File(args[1]).absolutePath])
+             use_slave(slave, [runner_exe.absolutePath, *args])
           }
 	//        println "Done!"
        }
@@ -67,12 +67,12 @@ def use_slave(slave, args)
 
     def proc = command.execute()
 
-//    proc.withWriter { stdin ->
-//       def c
-//       while (!done && (c = System.in.read()) >= 0) {
-//           stdin.write(c)
-//       }
-//    }
+    proc.withWriter { stdin ->
+       def c
+       while (!done && (c = System.in.read()) >= 0) {
+           stdin.write(c)
+       }
+    }
 
     proc.consumeProcessOutput(System.out, System.err)
     proc.waitFor()

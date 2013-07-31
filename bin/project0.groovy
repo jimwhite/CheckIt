@@ -3,4 +3,10 @@
 println args
 
 println System.getProperty('user.dir')
-println new File(args[1]).exists()
+
+if (args.size() > 1) {
+   println new File(args[1]).exists()
+}
+
+println '---'
+println System.in.text
