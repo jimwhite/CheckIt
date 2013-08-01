@@ -9,7 +9,9 @@
 //System.properties.each { println it }
 
 check_it_home = new File("/home2/ling572_00/Projects/CheckIt/")
+
 check_it_binaries = new File(check_it_home, "bin")
+
 runners = ["project0":"project0.groovy", "project1":"project1.groovy"]
 
 slave = null
