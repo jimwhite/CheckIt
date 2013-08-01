@@ -69,10 +69,11 @@ def use_slave(slave, args)
 
     def proc = command.execute()
 
-    proc.withWriter { stdin ->
-       def c
-       while (!done && (c = System.in.read()) >= 0) {
-           stdin.write(c)
+    proc.withOutputStream { stdin ->
+       byte[] buf = new byte[100000]
+       def cnt
+       while ((cnt = System.in.read(buf, 0, buf.size())) >= 0) {
+	  stdin.write(buf, 0, cnt)
        }
     }
 

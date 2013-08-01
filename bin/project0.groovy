@@ -1,4 +1,4 @@
-#!/usr/bin/env /home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin/groovy
+#!/usr/bin/env /home2/jimwhite/Projects/Groovy/groovy-1.8.6/bin/groovy
 
 import groovy.xml.MarkupBuilder
 
@@ -13,6 +13,8 @@ System.out.withWriter {
         p System.getProperty('user.dir')
 
         def checkit_dir = new File('project0')
+        
+        checkit_dir.mkdir()
 
         def tar_file = File.createTempFile('sub', '', checkit_dir)
 
@@ -22,6 +24,7 @@ System.out.withWriter {
 
         def content_dir = unpack_it(tar_file, temp_dir, delegate)
 
+        if (content_dir) {
         h2 "Contents"
         table {
             tr { th 'Name' ; th(style:'text-align:right', 'Size') }
@@ -32,6 +35,9 @@ System.out.withWriter {
                 }
             }
         }
+        } else {
+            h2 "No Content"
+        }
     }
 }
 
@@ -41,16 +47,13 @@ def copy_input_to_tar_file(File tar_file, def html)
 
     try {
         tar_file.withOutputStream { output ->
-            System.in.withStream { InputStream input ->
-                byte[] buf = new byte[100000]
-                def cnt
-                while ((cnt = input.read(buf, 0, buf.size())) >= 0) {
-                    output.write(buf, 0, cnt)
-                    copy_total += cnt
-                }
+            byte[] buf = new byte[100000]
+            def cnt
+            while ((cnt = System.in.read(buf, 0, buf.size())) >= 0) {
+                output.write(buf, 0, cnt)
+                copy_total += cnt
             }
         }
-
         html.p "Copied $copy_total bytes successfully."
     } catch(Exception ex) {
         html.p "Copying input (tar) file failed after ${copy_total} bytes: ${ex.message}"
@@ -61,7 +64,8 @@ File unpack_it(File tar_file, File temp_dir, def html)
 {
     def environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
 
-    html.p environment
+    html.h2 'Environment'
+    environment.each { html.pre it }
 
     def unpack_dir = new File(temp_dir, 'unpack')
     def content_dir = new File(temp_dir, 'content')
