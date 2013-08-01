@@ -1,11 +1,11 @@
 #!/usr/bin/env groovy
 
-args.each {
-    System.out.withWriter { writer ->
+System.out.withWriter { writer ->
+   args.each { arg ->
         def printer = new IndentWriter(writer)
-        new File(it).withReader { reader ->
+        new File(arg).withReader { reader ->
             if (args.size() > 1) {
-                printer.println "=== $it ==="
+                printer.println "=== $arg ==="
             }
             def sexpr
             while ((sexpr = read_one_sexp(reader)) != null) {
