@@ -25,20 +25,80 @@ System.out.withWriter {
         def content_dir = unpack_it(tar_file, temp_dir, delegate)
 
         if (content_dir) {
-        h2 "Contents"
-        table {
-            tr { th 'Name' ; th(style:'text-align:right', 'Size') }
-            content_dir.eachFile { file ->
-                tr {
-                    td(style:'font-family:sans-serif',  file.name)
-                    td(style:'text-align:right', file.size())
+            h2 "Contents"
+            table {
+                tr { th 'Name' ; th(style:'text-align:right', 'Size') }
+                content_dir.eachFile { file ->
+                    tr {
+                        td(style:'font-family:sans-serif',  file.name)
+                        td(style:'text-align:right', file.size())
+                    }
                 }
             }
-        }
+
+            def inventory = take_inventory(content_dir)
+
+            h2 "Submission Inventory"
+            table {
+                tr { th 'Present?' ; th 'OK?' ; th 'Item' ; th 'Path' ; th 'Full Path' /*; th(style:'text-align:right', 'Size')*/ }
+                inventory.each { item ->
+                    tr {
+                        td(item.exists ? 'yes' : 'no')
+                        td(item.exists ? 'ok' : (item.required ? 'NO' : 'ok?'))
+                        td item.name
+                        td(style:'font-family:sans-serif',  item.path)
+                        td(style:'font-family:sans-serif',  item.actual_path)
+//                        td(style:'text-align:right', item.size)
+                    }
+                }
+            }
+
+            if (inventory.ok.every()) {
+                inventory = inventory.collectEntries { [it.name, it] }
+                def executable = inventory.Executable
+                if (!executable.file.canExecute()) {
+                    h2 "Executable ${executable.path} is not executable"
+                } else {
+                    h2 "Ready To Go!"
+                }
+            }
         } else {
-            h2 "No Content"
+            h2 "No Content Found!"
         }
     }
+}
+
+def take_inventory(File content_dir)
+{
+   [
+        check_item(name:'Executable', path:'run.sh', required:true, dir:content_dir)
+      , check_item(name:'Condor Job', path:'condor.cmd', required:true, dir:content_dir)
+      , check_item(name:'Compile', path:'compile.sh', required:false, dir:content_dir)
+      , check_item(name:'Output', path:'output.txt', required:false, dir:content_dir)
+      , check_item(name:'README (txt)', path:'readme.txt', required:false, dir:content_dir)
+      , check_item(name:'README (pdf)', path:'readme.pdf', required:false, dir:content_dir)
+   ]
+}
+
+def check_item(Map spec)
+{
+    def dir = spec.dir
+    def file = new File(dir, spec.path)
+    def actual_path = ''
+    def exists = false
+    def size = -1
+
+    try {
+        exists = file.exists()
+        if (exists) {
+            actual_path = file.path
+            size = file.size()
+        }
+    } catch (IOException ex) {
+
+    }
+
+    [name:spec.name, required:spec.required, file:file, exists:exists, ok:exists || !spec.required, path:spec.path, actual_path:actual_path, size:size]
 }
 
 def copy_input_to_tar_file(File tar_file, def html)
