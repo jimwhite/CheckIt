@@ -1,33 +1,108 @@
 #!/usr/bin/env /home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin/groovy
 
-println args
+import groovy.xml.MarkupBuilder
 
-println System.getProperty('user.dir')
+System.out.withWriter {
+    new MarkupBuilder(it).html {
+        def project_id = args.size() > 0 ? args[0] : "MISSING!"
 
-def checkit_dir = new File('project0')
+        h1 "CheckIt ${project_id}"
 
-def tar_file = File.createTempFile('sub', '', checkit_dir)
+        p(args as List)
 
-def copy_total = 0
+        p System.getProperty('user.dir')
 
-try {
-    tar_file.withOutputStream { output ->
-        System.in.withStream { InputStream input ->
-            byte[] buf = new byte[100000]
-            def cnt
-            while ((cnt = input.read(buf, 0, buf.size())) >= 0) {
-                output.write(buf, 0, cnt)
-                copy_total += cnt
+        def checkit_dir = new File('project0')
+
+        def tar_file = File.createTempFile('sub', '', checkit_dir)
+
+        copy_input_to_tar_file(tar_file, delegate)
+
+        def temp_dir = new File(checkit_dir, tar_file.name + '.dir')
+
+        def content_dir = unpack_it(tar_file, temp_dir, delegate)
+
+        h2 "Contents"
+        table {
+            tr { th 'Name' ; th(style:'text-align:right', 'Size') }
+            content_dir.eachFile { file ->
+                tr {
+                    td(style:'font-family:sans-serif',  file.name)
+                    td(style:'text-align:right', file.size())
+                }
             }
         }
     }
-
-    println "Copied $copy_total bytes successfully."
-} catch(Exception ex) {
-    println "Copying input (tar) file failed after ${copy_total} bytes: ${ex.message}"
 }
 
-def temp_dir = new File(checkit_dir, tar_file.name + '.dir')
+def copy_input_to_tar_file(File tar_file, def html)
+{
+    def copy_total = 0
 
-temp_dir.mkdir()
+    try {
+        tar_file.withOutputStream { output ->
+            System.in.withStream { InputStream input ->
+                byte[] buf = new byte[100000]
+                def cnt
+                while ((cnt = input.read(buf, 0, buf.size())) >= 0) {
+                    output.write(buf, 0, cnt)
+                    copy_total += cnt
+                }
+            }
+        }
+
+        html.p "Copied $copy_total bytes successfully."
+    } catch(Exception ex) {
+        html.p "Copying input (tar) file failed after ${copy_total} bytes: ${ex.message}"
+    }
+}
+
+File unpack_it(File tar_file, File temp_dir, def html)
+{
+    def environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
+
+    html.p environment
+
+    def unpack_dir = new File(temp_dir, 'unpack')
+    def content_dir = new File(temp_dir, 'content')
+
+    unpack_dir.mkdirs()
+
+    def command = ['tar', 'xf', tar_file.absolutePath]
+
+    html.pre command.join(' ')
+
+    def proc = command.execute(environment, unpack_dir)
+    def stdout = new StringBuilder()
+    def stderr = new StringBuilder()
+
+    proc.consumeProcessOutput(stdout, stderr)
+    proc.waitFor()
+
+    if (stdout) println stdout
+    if (stderr) {
+        html.h3 "ERROR:"
+        html.pre stderr
+    }
+    if (proc.exitValue()) { html.h3 "Error: ${proc.exitValue()}" }
+
+    def files = unpack_dir.listFiles()
+
+    // Find the top-level directory of the tar file.  Skip levels with just a single directory.
+    while (files.size() == 1 && files[0].isDirectory()) {
+        unpack_dir = files[0]
+        files = unpack_dir.listFiles()
+    }
+
+    if (files.size() < 1) {
+        html.h3 "Can't unpack tar file or it is empty!"
+        null
+    } else {
+        // Move the top-level of the tar file to the 'content' directory.
+        if (!unpack_dir.renameTo(content_dir)) {
+            html.h3 "RENAME FAILED!"
+        }
+        content_dir
+    }
+}
 
