@@ -125,14 +125,14 @@ report_file.withWriter {
                     }
 
                     def submit_output_file = new File(temp_dir, 'submit_out.txt')
-                    def submit_result = run_it(["condor_submit", inventory.Condor.path]
+                    def submit_result = run_it(["/condor/bin/condor_submit", inventory.Condor.path]
                             , submit_output_file, new File(temp_dir, 'submit_err.txt'))
 
                     if (submit_result == 0)
                     {
                         def condor_job = new File(content_dir, inventory.Condor.path)
                         def condor_log_path = condor_get_variable(condor_job, 'LOG')
-                        def wait_result = run_it(["condor_wait", "-wait", MAX_WAIT_SECONDS, condor_log_path]
+                        def wait_result = run_it(["/condor/bin/condor_wait", "-wait", MAX_WAIT_SECONDS, condor_log_path]
                                 , new File(temp_dir, 'wait_out.txt'), new File(temp_dir, 'wait_err.txt'))
 
                         def show_job_file = { var_name ->
@@ -158,10 +158,16 @@ report_file.withWriter {
                             cluster_number_lines.each { line ->
                                 def cluster_number = (line =~ cluster_number_pattern)[0][1]
                                 h4 "Removing job $cluster_number"
-                                def remove_result = run_it(["condor_rm", cluster_number]
+                                def remove_result = run_it(["/condor/bin/condor_rm", cluster_number]
                                         , new File(temp_dir, "remove_${cluster_number}_out.txt")
                                         , new File(temp_dir, "remove_${cluster_number}_err.txt"))
                             }
+                            
+                            h2 "Condor Job Failed"
+                            p """There was a problem running your Condor Job.  Please inspect the logs
+                              and error output to see what sort of problem occurred.  The most likely
+                              cause is a value for Executable that isn't actually executable (chmod +x ...).
+                              """
                         } else {
                             h2 "Condor Job Completed"
                             p """This tar file conforms to the "Runs As-Is" rubric for the Condor Job
