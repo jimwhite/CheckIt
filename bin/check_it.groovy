@@ -81,7 +81,4 @@ def use_slave(slave, args)
     proc.waitFor()
 
     done = true
-
-    println()
-    println "exitValue = ${proc.exitValue()}"
 }
