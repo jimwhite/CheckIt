@@ -177,8 +177,15 @@ report_file.withWriter {
                             to include (such as README), then you should fix that before submitting.
                             """
                         }
+                    } else {
+                        h2 "Submitting Job to Condor Failed"
+                        p """The condor_submit call on your job failed right away.  That usually
+                          means some problem with the job control file."""
                     }
                 }
+            } else {
+                h2 "Required file(s) Missing!"
+                p """One or more of the files required in order to submit this job to Condor are missing."""
             }
         } else {
             h2 "No Content Found!"
