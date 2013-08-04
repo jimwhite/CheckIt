@@ -6,7 +6,7 @@ import java.util.regex.Pattern
 
 environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
 
-def MAX_WAIT_SECONDS = 15
+def MAX_WAIT_SECONDS = 900
 
 def checkit_dir = new File('project1')
 
