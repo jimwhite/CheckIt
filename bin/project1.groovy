@@ -155,8 +155,15 @@ report_file.withWriter {
 
                             def cluster_number_pattern = ~/(?)\d+ job\(s\) submitted to cluster (\d+)./
                             def cluster_number_lines = submit_output_file.readLines().grep(cluster_number_pattern)
+
                             cluster_number_lines.each { line ->
                                 def cluster_number = (line =~ cluster_number_pattern)[0][1]
+
+                                h4 "Analyzing job $cluster_number"
+                                def analyze_result = run_it(["/condor/bin/condor_q", "-analyze", cluster_number]
+                                        , new File(temp_dir, "analyze_${cluster_number}_out.txt")
+                                        , new File(temp_dir, "analyze_${cluster_number}_err.txt"))
+
                                 h4 "Removing job $cluster_number"
                                 def remove_result = run_it(["/condor/bin/condor_rm", cluster_number]
                                         , new File(temp_dir, "remove_${cluster_number}_out.txt")
