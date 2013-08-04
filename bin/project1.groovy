@@ -6,7 +6,11 @@ import java.util.regex.Pattern
 
 environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
 
-def checkit_dir = new File('project0')
+def MAX_WAIT_SECONDS = 15
+
+def checkit_dir = new File('project1')
+
+checkit_dir.mkdirs()
 
 def tar_file = File.createTempFile('sub', '', checkit_dir)
 
@@ -61,14 +65,115 @@ report_file.withWriter {
 
             if (inventory.ok.every()) {
                 inventory = inventory.collectEntries { [it.name, it] }
+
+                def user_submission_output = new File(temp_dir, 'output.txt')
+                inventory.Output.file.renameTo(user_submission_output)
+                inventory.Output.file = user_submission_output
+
                 def executable = inventory.Exec
                 if (!executable.file.canExecute()) {
                     h2 "Executable ${executable.path} is not executable"
                 } else {
-                    h2 "Ready To Run Condor Job"
+                    h2 "Running Condor Job"
+
+                    def run_it = { List<String> command, outFile, errFile ->
+                        p {
+                            h3 command.join(' ')
+                        }
+
+                        def exitValue
+
+                        outFile.withOutputStream { OutputStream stdout ->
+                            errFile.withOutputStream { OutputStream stderr ->
+                                def proc = command.execute(environment, content_dir)
+                                proc.consumeProcessOutput(stdout, stderr)
+                                proc.waitFor()
+                                exitValue = proc.exitValue()
+                            }
+                        }
+
+                        if (exitValue) {
+                            h3 'Error!'
+                            p "exitValue: $exitValue"
+                        }
+
+                        def outText = outFile.text
+                        if (outText) {
+                            pre outText
+                        }
+
+                        def errText = errFile.text
+                        if (errText) {
+                            h3 "stderr"
+                            pre errText
+                        }
+
+                        exitValue
+                    }
+
+                    def show_text = { List<String> lines, Integer len ->
+                        if (lines.size() > len) {
+                            def mid = len / 2 as Integer
+                            lines = lines[0..<mid] + ['', '...', ''] + lines[(-mid)..-1]
+                        }
+
+                        if (lines.size() > 0) {
+                            pre(lines.join('\n'))
+                        } else {
+                            p { em "Empty" }
+                        }
+                    }
+
+                    def submit_output_file = new File(temp_dir, 'submit_out.txt')
+                    def submit_result = run_it(["condor_submit", inventory.Condor.path]
+                            , submit_output_file, new File(temp_dir, 'submit_err.txt'))
+
+                    if (submit_result == 0)
+                    {
+                        def condor_job = new File(content_dir, inventory.Condor.path)
+                        def condor_log_path = condor_get_variable(condor_job, 'LOG')
+                        def wait_result = run_it(["condor_wait", "-wait", MAX_WAIT_SECONDS, condor_log_path]
+                                , new File(temp_dir, 'wait_out.txt'), new File(temp_dir, 'wait_err.txt'))
+
+                        def show_job_file = { var_name ->
+                            def output_path = condor_get_variable(condor_job, var_name)
+                            h3 "Job Results: $var_name"
+                            def the_file = new File(content_dir, output_path)
+                            if (the_file.exists()) {
+                                show_text(the_file.readLines(), 20)
+                            } else {
+                                h4 "File does not exist!"
+                            }
+                        }
+
+                        show_job_file('Log')
+                        show_job_file('Error')
+                        show_job_file('Output')
+
+                        if (wait_result != 0) {
+                            h3 "Error in waiting for job : Trying to remove it now..."
+
+                            def cluster_number_pattern = ~/(?)\d+ job\(s\) submitted to cluster (\d+)./
+                            def cluster_number_lines = submit_output_file.readLines().grep(cluster_number_pattern)
+                            cluster_number_lines.each { line ->
+                                def cluster_number = (line =~ cluster_number_pattern)[0][1]
+                                h4 "Removing job $cluster_number"
+                                def remove_result = run_it(["condor_rm", cluster_number]
+                                        , new File(temp_dir, "remove_${cluster_number}_out.txt")
+                                        , new File(temp_dir, "remove_${cluster_number}_err.txt"))
+                            }
+                        } else {
+                            h2 "Condor Job Completed"
+                            p """This tar file conforms to the "Runs As-Is" rubric for the Condor Job
+                            portion of Project 1.  This version of CheckIt! does not yet test your compile.sh.
+                            Note that this is not any sort of check on whether your output is correct.
+                            Also note that if the file inventory showed missing items that you intend
+                            to include (such as README), then you should fix that before submitting.
+                            """
+                        }
+                    }
                 }
             }
-
         } else {
             h2 "No Content Found!"
         }
