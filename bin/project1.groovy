@@ -141,7 +141,7 @@ report_file.withWriter {
 
                             def show_job_file = { var_name ->
                                 def output_path = condor_get_variable(condor_job, var_name)
-                                h3 "Job Results: $var_name"
+                                h3 "Job Results: $var_name ($output_path)"
                                 if (output_path == null) {
                                     h4 "Condor job file has no setting for $var_name"
                                 } else {
@@ -217,9 +217,9 @@ def condor_get_variable(File condor_job, variable_name)
 
 def condor_get_variable(List<String> condor_job, variable_name)
 {
-    def pattern = ~"(?i)^\\s*$variable_name\\s*=\\s*(.*)\$"
+    def pattern = ~"(?i)^\\s*$variable_name\\s*=(.*)\$"
     def values = condor_job.grep(pattern)
-    values.size() < 1 ? null : (values.head() =~ pattern)[0][1]
+    values.size() < 1 ? null : ((values.head() =~ pattern)[0][1]).trim()
 }
 
 def take_inventory(File content_dir)
