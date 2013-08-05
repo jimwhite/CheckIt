@@ -132,57 +132,67 @@ report_file.withWriter {
                     {
                         def condor_job = new File(content_dir, inventory.Condor.path)
                         def condor_log_path = condor_get_variable(condor_job, 'LOG')
-                        def wait_result = run_it(["/condor/bin/condor_wait", "-wait", MAX_WAIT_SECONDS, condor_log_path]
-                                , new File(temp_dir, 'wait_out.txt'), new File(temp_dir, 'wait_err.txt'))
 
-                        def show_job_file = { var_name ->
-                            def output_path = condor_get_variable(condor_job, var_name)
-                            h3 "Job Results: $var_name"
-                            def the_file = new File(content_dir, output_path)
-                            if (the_file.exists()) {
-                                show_text(the_file.readLines(), 20)
-                            } else {
-                                h4 "File does not exist!"
+                        if (condor_log_path == null) {
+                            h2 "Can't run Condor job! No setting for LOG."
+                        } else {
+                            def wait_result = run_it(["/condor/bin/condor_wait", "-wait", MAX_WAIT_SECONDS, condor_log_path]
+                                    , new File(temp_dir, 'wait_out.txt'), new File(temp_dir, 'wait_err.txt'))
+
+                            def show_job_file = { var_name ->
+                                def output_path = condor_get_variable(condor_job, var_name)
+                                h3 "Job Results: $var_name"
+                                if (output_path == null) {
+                                    h4 "Condor job file has no setting for $var_name"
+                                } else {
+                                    def the_file = new File(content_dir, output_path)
+                                    if (the_file.exists()) {
+                                        show_text(the_file.readLines(), 20)
+                                    } else {
+                                        h4 "File does not exist!"
+                                    }
+                                }
                             }
-                        }
 
-                        show_job_file('Log')
-                        show_job_file('Error')
-                        show_job_file('Output')
+                            show_job_file('Log')
+                            show_job_file('Error')
+                            show_job_file('Output')
 
-                        if (wait_result != 0) {
-                            h3 "Error in waiting for job : Trying to remove it now..."
+                            if (wait_result != 0) {
+                                h3 "Error in waiting for job : Trying to remove it now..."
 
-                            def cluster_number_pattern = ~/(?)\d+ job\(s\) submitted to cluster (\d+)./
-                            def cluster_number_lines = submit_output_file.readLines().grep(cluster_number_pattern)
+                                def cluster_number_pattern = ~/(?)\d+ job\(s\) submitted to cluster (\d+)./
+                                def cluster_number_lines = submit_output_file.readLines().grep(cluster_number_pattern)
 
-                            cluster_number_lines.each { line ->
-                                def cluster_number = (line =~ cluster_number_pattern)[0][1]
+                                cluster_number_lines.each { line ->
+                                    def cluster_number = (line =~ cluster_number_pattern)[0][1]
 
-                                h4 "Analyzing job $cluster_number"
-                                def analyze_result = run_it(["/condor/bin/condor_q", "-analyze", cluster_number]
-                                        , new File(temp_dir, "analyze_${cluster_number}_out.txt")
-                                        , new File(temp_dir, "analyze_${cluster_number}_err.txt"))
+                                    h4 "Analyzing job $cluster_number"
+                                    def analyze_result = run_it(["/condor/bin/condor_q", "-analyze", cluster_number]
+                                            , new File(temp_dir, "analyze_${cluster_number}_out.txt")
+                                            , new File(temp_dir, "analyze_${cluster_number}_err.txt"))
 
-                                h4 "Removing job $cluster_number"
-                                def remove_result = run_it(["/condor/bin/condor_rm", cluster_number]
-                                        , new File(temp_dir, "remove_${cluster_number}_out.txt")
-                                        , new File(temp_dir, "remove_${cluster_number}_err.txt"))
-                            }
-                            
-                            h2 "Condor Job Failed"
-                            p """There was a problem running your Condor Job.  Please inspect the logs
+                                    h4 "Removing job $cluster_number"
+                                    def remove_result = run_it(["/condor/bin/condor_rm", cluster_number]
+                                            , new File(temp_dir, "remove_${cluster_number}_out.txt")
+                                            , new File(temp_dir, "remove_${cluster_number}_err.txt"))
+                                }
+
+                                h2 "Condor Job Failed"
+                                p """There was a problem running your Condor Job.  Please inspect the logs
                               and error output to see what sort of problem occurred.  The most likely
                               cause is a value for Executable that isn't actually executable (chmod +x ...).
                               """
-                        } else {
-                            h2 "Condor Job Completed"
-                            p """This tar file conforms to the "Runs As-Is" rubric for the Condor Job
-                            portion of Project 1.  This version of CheckIt! does not yet test your compile.sh.
+                            } else {
+                                h2 "Condor Job Completed"
+                                p """This tar file conforms to the "Runs As-Is" rubric for the Condor Job
+                            portion of Project 1.  This version of CheckIt! does not yet test your
+                            compile.sh (if any).
                             Note that this is not any sort of check on whether your output is correct.
                             Also note that if the file inventory showed missing items that you intend
                             to include (such as README), then you should fix that before submitting.
                             """
+                            }
                         }
                     } else {
                         h2 "Submitting Job to Condor Failed"
