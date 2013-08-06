@@ -124,18 +124,21 @@ report_file.withWriter {
                         }
                     }
 
-                    def submit_output_file = new File(temp_dir, 'submit_out.txt')
-                    def submit_result = run_it(["/condor/bin/condor_submit", inventory.Condor.path]
-                            , submit_output_file, new File(temp_dir, 'submit_err.txt'))
+                    def condor_job = new File(content_dir, inventory.Condor.path)
+                    def condor_log_path = condor_get_variable(condor_job, 'LOG')
 
-                    if (submit_result == 0)
-                    {
-                        def condor_job = new File(content_dir, inventory.Condor.path)
-                        def condor_log_path = condor_get_variable(condor_job, 'LOG')
+                    if (condor_log_path == null) {
+                        h2 "Can't run Condor job! No setting for LOG."
+                    } else {
+                        def condor_log_file = new File(content_dir, condor_log_path)
 
-                        if (condor_log_path == null) {
-                            h2 "Can't run Condor job! No setting for LOG."
-                        } else {
+                        if (condor_log_file.exists()) condor_log_file.delete()
+
+                        def submit_output_file = new File(temp_dir, 'submit_out.txt')
+                        def submit_result = run_it(["/condor/bin/condor_submit", inventory.Condor.path]
+                                , submit_output_file, new File(temp_dir, 'submit_err.txt'))
+
+                        if (submit_result == 0) {
                             def wait_result = run_it(["/condor/bin/condor_wait", "-wait", MAX_WAIT_SECONDS, condor_log_path]
                                     , new File(temp_dir, 'wait_out.txt'), new File(temp_dir, 'wait_err.txt'))
 
@@ -193,11 +196,11 @@ report_file.withWriter {
                             to include (such as README), then you should fix that before submitting.
                             """
                             }
+                        } else {
+                            h2 "Submitting Job to Condor Failed"
+                            p """The condor_submit call on your job failed right away.  That usually
+                              means some problem with the job control file."""
                         }
-                    } else {
-                        h2 "Submitting Job to Condor Failed"
-                        p """The condor_submit call on your job failed right away.  That usually
-                          means some problem with the job control file."""
                     }
                 }
             } else {
