@@ -15,7 +15,13 @@ int main(int argc, char** argv) {
        snprintf(user_evar, 80, "CHECKIT_USER=%s", passwd->pw_name);
 
        // Use a nice clean PATH.
-       char * envp[] = { "PATH=/bin:/usr/bin", user_evar, (char *) 0 };
+       char * envp[] = { 
+            "PATH=/bin:/usr/bin"
+            , "HOME=/home2/ling572_00"
+            , "JAVA_HOME=/usr/java/latest"
+            , "JAVA_OPTS=-Xmx300m -Xms140m"
+            , user_evar
+            , (char *) 0 };
 
        // Do it!
        errno = execve("/home2/ling572_00/Projects/CheckIt/bin/check_it.groovy", argv, envp);
