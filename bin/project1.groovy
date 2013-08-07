@@ -9,14 +9,14 @@ environment = System.getenv().entrySet().collect { it.key + '=' + it.value }
 
 def MAX_WAIT_SECONDS = 900
 
-def submitter_id = args.size() > 0 ? args[0] : "_missing_"
+def submitter_id = args.size() > 0 ? args[0] : "_missing"
 def project_id = args.size() > 1 ? args[1] : "MISSING!"
 
 def checkit_dir = new File('project1')
 
 checkit_dir.mkdirs()
 
-def tar_file = File.createTempFile(submitter_id, '', checkit_dir)
+def tar_file = File.createTempFile(submitter_id + '_', '', checkit_dir)
 
 def temp_dir = new File(checkit_dir, tar_file.name + '.dir')
 
