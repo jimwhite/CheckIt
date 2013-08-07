@@ -32,8 +32,10 @@ try {
              println "Unknown project id : ${args[0]}"
           } else {
              def runner_exe = new File(check_it_binaries, runner)
+             
+             def submitter_id = System.getenv('CHECKIT_USER') ?: '_unknown_'
   
-             use_slave(slave, [runner_exe.absolutePath, *args])
+             use_slave(slave, [runner_exe.absolutePath, submitter_id, *args])
           }
 	//        println "Done!"
        }

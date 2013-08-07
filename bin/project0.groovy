@@ -4,7 +4,8 @@ import groovy.xml.MarkupBuilder
 
 import java.util.regex.Pattern
 
-environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
+//environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
+environment = System.getenv().entrySet().collect { it.key + '=' + it.value }
 
 def checkit_dir = new File('project0')
 

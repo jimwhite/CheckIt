@@ -4,15 +4,19 @@ import groovy.xml.MarkupBuilder
 
 import java.util.regex.Pattern
 
-environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
+//environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
+environment = System.getenv().entrySet().collect { it.key + '=' + it.value }
 
 def MAX_WAIT_SECONDS = 900
+
+def submitter_id = args.size() > 0 ? args[0] : "_missing_"
+def project_id = args.size() > 1 ? args[1] : "MISSING!"
 
 def checkit_dir = new File('project1')
 
 checkit_dir.mkdirs()
 
-def tar_file = File.createTempFile('sub', '', checkit_dir)
+def tar_file = File.createTempFile(submitter_id, '', checkit_dir)
 
 def temp_dir = new File(checkit_dir, tar_file.name + '.dir')
 
@@ -22,9 +26,7 @@ def report_file = new File(temp_dir, 'report.html')
 
 report_file.withWriter {
     new MarkupBuilder(it).html {
-        def project_id = args.size() > 0 ? args[0] : "MISSING!"
-
-        h1 "CheckIt! ${project_id}"
+        h1 "CheckIt! ${project_id} for ${submitter_id}"
 
         p(args as List)
 
