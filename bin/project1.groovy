@@ -32,6 +32,9 @@ report_file.withWriter {
 
         p System.getProperty('user.dir')
 
+        h2 'Environment'
+        pre environment.join('\n')
+
         copy_input_to_tar_file(tar_file, delegate)
 
         def content_dir = unpack_it(tar_file, temp_dir, delegate)
@@ -152,7 +155,7 @@ report_file.withWriter {
                                 } else {
                                     def the_file = new File(content_dir, output_path)
                                     if (the_file.exists()) {
-                                        show_text(the_file.readLines(), 20)
+                                        show_text(the_file.readLines(), 50)
                                     } else {
                                         h4 "File does not exist!"
                                     }
@@ -229,13 +232,13 @@ def condor_get_variable(List<String> condor_job, variable_name)
 
 def take_inventory(File content_dir)
 {
-   [
-        check_item(name:'Exec', path:'run.sh', required:true, dir:content_dir)
-      , check_item(name:'Condor', path:'condor.cmd', required:true, dir:content_dir)
-      , check_item(name:'Compile', path:'compile.sh', required:false, dir:content_dir)
-      , check_item(name:'Output', path:'output.txt', required:false, dir:content_dir)
-      , check_item(name:'README', path:~'(?i)readme\\.(txt|pdf)', required:false, dir:content_dir)
-   ]
+    [
+            check_item(name:'Exec', path:'run.sh', required:true, dir:content_dir)
+            , check_item(name:'Condor', path:'condor.cmd', required:true, dir:content_dir)
+            , check_item(name:'Compile', path:'compile.sh', required:false, dir:content_dir)
+            , check_item(name:'Output', path:'output.txt', required:false, dir:content_dir)
+            , check_item(name:'README', path:~'(?i)readme\\.(txt|pdf)', required:false, dir:content_dir)
+    ]
 }
 
 def check_item(Map spec)
@@ -291,9 +294,6 @@ def copy_input_to_tar_file(File tar_file, def html)
 
 File unpack_it(File tar_file, File temp_dir, def html)
 {
-    html.h2 'Environment'
-    environment.each { html.pre it }
-
     def unpack_dir = new File(temp_dir, 'unpack')
     def content_dir = new File(temp_dir, 'content')
 
