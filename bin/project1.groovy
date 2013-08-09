@@ -7,7 +7,7 @@ import java.util.regex.Pattern
 //environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
 environment = System.getenv().entrySet().collect { it.key + '=' + it.value }
 
-def MAX_WAIT_SECONDS = 900
+def MAX_WAIT_SECONDS = 3600
 
 def submitter_id = args.size() > 0 ? args[0] : "_missing"
 def project_id = args.size() > 1 ? args[1] : "MISSING!"
