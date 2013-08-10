@@ -119,7 +119,7 @@ report_file.withWriter {
                     def show_text = { List<String> lines, Integer len ->
                         if (lines.size() > len) {
                             def mid = len / 2 as Integer
-                            lines = lines[0..<mid] + ['', '...', ''] + lines[(-mid)..-1]
+                            lines = lines[0..<mid] + ['', "... skipping ${lines.size() - len} lines ...", ''] + lines[(-mid)..-1]
                         }
 
                         if (lines.size() > 0) {
