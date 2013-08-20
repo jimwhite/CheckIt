@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
             , "HOME=/home2/ling572_00"
             , "JAVA_HOME=/usr/java/latest"
             , "JAVA_OPTS=-Xmx300m -Xms140m"
+            , "LC_ALL=en_US.UTF-8"
             , user_evar
             , (char *) 0 };
 
