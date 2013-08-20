@@ -15,7 +15,7 @@ check_it_binaries = new File(check_it_home, "bin")
 runners = [project0:"project0.groovy"
         , project1:"project1.groovy"
         , project2:"project1.groovy"
-        , project3:"project1.groovy"
+        , project3:"project3.groovy"
         , project4:"project1.groovy"
         , project5:"project1.groovy"
         , project6:"project1.groovy"
