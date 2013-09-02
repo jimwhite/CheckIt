@@ -239,12 +239,25 @@ report_file.withWriter {
                                     def the_file = new File(content_dir, output_path)
                                     if (the_file.exists()) {
                                     	def the_text = the_file.getText("UTF-8")
-                                        
+                                        def line_count = 0
+                                        def mismatches = 0
+                                        expected_output.eachLine { line ->
+                                            line_count += 1
+                                            if (the_text.indexOf(line) < 0) {
+                                                mismatches += 1
+                                                p('No match: ' + line)
+                                            }
+                                        }
+                                        if (!mismatches) {
+                                            h4 "ALL LINES MATCHED!"
+                                        }
                                     } else {
                                         h4 "File does not exist!"
                                     }
                                 }
                             }
+
+                            match_output_file()
 
 			    
                             if (wait_result != 0) {
@@ -300,12 +313,12 @@ report_file.withWriter {
     }
 }
 
-def condor_get_variable(File condor_job, variable_name)
+String condor_get_variable(File condor_job, variable_name)
 {
     condor_get_variable(condor_job.readLines(), variable_name)
 }
 
-def condor_get_variable(List<String> condor_job, variable_name)
+String condor_get_variable(List<String> condor_job, variable_name)
 {
     def pattern = ~"(?i)^\\s*$variable_name\\s*=(.*)\$"
     def values = condor_job.grep(pattern)
