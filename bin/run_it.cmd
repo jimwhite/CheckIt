@@ -7,7 +7,7 @@
 
 Universe   = vanilla
 
-Environment = PATH=/home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin:/usr/kerberos/bin:/usr/local/bin:/bin:/usr/bin:/opt/git/bin:/opt/scripts:/condor/bin;LD_LIBRARY_PATH=/opt/xerces/lib
+Environment = PATH=/home2/jimwhite/Projects/Groovy/groovy-2.1.6/bin:/usr/kerberos/bin:/usr/local/bin:/bin:/usr/bin:/opt/git/bin:/opt/scripts:/condor/bin;LD_LIBRARY_PATH=/opt/xerces/lib;LC_ALL=en_US.UTF-8
 
 Executable  = $(CHECKIT_HOME)/bin/$(_PROJECT_ID).groovy
 Arguments   = run_it $(_PROJECT_ID)
