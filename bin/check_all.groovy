@@ -56,12 +56,22 @@ System.out.withWriter {
 
         args.tail().each {
             def project_dir = new File(it)
-            def project_tar_file = new File(project_dir, project_id + ".tar") // find_project_tar_file(project_dir)
-            def command = ['condor_submit', run_it_exe
-                    , "-append", "CHECKIT_HOME=$checkit_dir"
-                    , "-append", "_PROJECT_ID=$project_id"
-                    , "-append", "_PROJECT_TAR_FILE=${project_tar_file.absolutePath}"]
-            run_it(project_dir, command)
+            File project_tar_file = find_project_tar_file(project_dir)
+            if (project_tar_file) {
+                def command = ['condor_submit', run_it_exe
+                        , "-append", "CHECKIT_HOME=$checkit_dir"
+                        , "-append", "_PROJECT_ID=$project_id"
+                        , "-append", "_PROJECT_TAR_FILE=${project_tar_file.absolutePath}"]
+                run_it(project_dir, command)
+            } else {
+                h2 "No tar file found for in $project_dir"
+            }
         }
     }
+}
+
+
+def find_project_tar_file(File project_dir)
+{
+    project_dir.listFiles().find { it.name.contains('tar') }
 }
