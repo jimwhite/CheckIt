@@ -256,6 +256,21 @@ report_file.withWriter {
                         [headers:headers, init:init_probs, trans:trans_probs, emiss:emiss_probs]
                     }
 
+                    def def load_hmm_safe = { File hmm_model_file ->
+                        try {
+                            if (hmm_model_file.exists()) {
+                                load_hmm(hmm_model_file)
+                            } else {
+                                h3 "Model file '${hmm_model_file.path}' does not exist"
+                                null
+                            }
+                        } catch (Exception ex) {
+                            h3 "Exception loading model file '${hmm_model_file.path}' : ${ex.message}"
+//                            pre (ex.pr)
+                            null
+                        }
+                    }
+
                     def compare_hmm_probs = { String section_name, Map exp_probs, Map act_probs ->
                         def all_from_states = (exp_probs.keySet() + act_probs.keySet()).unique().sort()
                         table {
