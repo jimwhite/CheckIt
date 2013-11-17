@@ -256,7 +256,7 @@ report_file.withWriter {
                         [headers:headers, init:init_probs, trans:trans_probs, emiss:emiss_probs]
                     }
 
-                    def def load_hmm_safe = { File hmm_model_file ->
+                    def load_hmm_safe = { File hmm_model_file ->
                         try {
                             if (hmm_model_file.exists()) {
                                 load_hmm(hmm_model_file)
