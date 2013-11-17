@@ -129,11 +129,11 @@ report_file.withWriter {
                     }
 
                     //  final TOTAL_KEY = " <TOTAL> "
+                    def epsilon = 1.0e-4
 
                     def load_section = { Map headers, SectionReader lm_file_reader, String name, String delimiter, Pattern pattern ->
                         def count = 0
                         def stateProbs = [:]   // .withDefault { [(TOTAL_KEY):0] }
-                        def epsilon = 1.0e-4
 
                         def minLogRatio = null
                         def maxLogRatio = null
@@ -147,20 +147,21 @@ report_file.withWriter {
                             if (line) {
 //                                def groups = (pattern.matcher(line))[0]
                                 if (pattern.matcher(line).matches()) {
-                                    def (_, from_state, to_state, prob, logProb) = (pattern.matcher(line))[0]
+//                                    def (_, from_state, to_state, prob, logProb) = (pattern.matcher(line))[0]
+//                                    logProb = logProb as Double
+                                    def (_, from_state, to_state, prob) = (pattern.matcher(line))[0]
                                     prob = prob as BigDecimal
-                                    logProb = logProb as Double
 
                                     if (!stateProbs.containsKey(from_state)) { stateProbs[from_state] = [:] }
                                     stateProbs[from_state][to_state] = prob
                                     // stateProbs[from_state][TOTAL_KEY] += prob
                                     count += 1
 
-                                    def logRatio = Math.log(prob) / logProb
-                                    if (!logRatio.isNaN()) {
-                                        if (minLogRatio == null || logRatio < minLogRatio)  minLogRatio = logRatio
-                                        if (logRatio > maxLogRatio)  maxLogRatio = logRatio
-                                    }
+//                                    def logRatio = Math.log(prob) / logProb
+//                                    if (!logRatio.isNaN()) {
+//                                        if (minLogRatio == null || logRatio < minLogRatio)  minLogRatio = logRatio
+//                                        if (logRatio > maxLogRatio)  maxLogRatio = logRatio
+//                                    }
                                 } else {
                                     h3 "Badly formatted line"
                                     pre line
@@ -168,9 +169,9 @@ report_file.withWriter {
                             }
                         }
 
-                        if (maxLogRatio && minLogRatio && ((maxLogRatio - minLogRatio) > epsilon)) {
-                            h3 "LogProb base has wide range $minLogRatio to $maxLogRatio"
-                        }
+//                        if (maxLogRatio && minLogRatio && ((maxLogRatio - minLogRatio) > epsilon)) {
+//                            h3 "LogProb base has wide range $minLogRatio to $maxLogRatio"
+//                        }
 
 /*
                         stateProbs.each { String state, Number prob ->
@@ -243,17 +244,61 @@ report_file.withWriter {
                             pre "Missing header $it"
                         }
 
-                        def init_probs = load_section(headers, lm_file_reader, 'init_line_num', 'init', ~/^(\S++)(\s++)(\S++)\s++(\S++).*/)
-                        def trans_probs = load_section(headers, lm_file_reader, 'trans_line_num', 'transition', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
-                        def emiss_probs = load_section(headers, lm_file_reader, 'emiss_line_num', 'emission', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
+//                        def init_probs = load_section(headers, lm_file_reader, 'init_line_num', 'init', ~/^(\S++)(\s++)(\S++)\s++(\S++).*/)
+//                        def trans_probs = load_section(headers, lm_file_reader, 'trans_line_num', 'transition', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
+//                        def emiss_probs = load_section(headers, lm_file_reader, 'emiss_line_num', 'emission', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
+                        def init_probs = load_section(headers, lm_file_reader, 'init_line_num', 'init', ~/^(\S++)(\s++)(\S++)\s*+.*/)
+                        def trans_probs = load_section(headers, lm_file_reader, 'trans_line_num', 'transition', ~/^(\S++)\s++(\S++)\s++(\S++)\s*+.*/)
+                        def emiss_probs = load_section(headers, lm_file_reader, 'emiss_line_num', 'emission', ~/^(\S++)\s++(\S++)\s++(\S++)\s*+.*/)
 
                         check_symbol_count(headers, hmm_model_file)
 
                         [headers:headers, init:init_probs, trans:trans_probs, emiss:emiss_probs]
                     }
 
+                    def compare_hmm_probs = { String section_name, Map exp_probs, Map act_probs ->
+                        def all_from_states = (exp_probs.keySet() + act_probs.keySet()).unique().sort()
+                        table {
+                            tr { tr { td("from") ; td("to") ; td("expected") ; td("actual") } }
+                            all_from_states.each { from_state ->
+                                if (exp_probs.containsKey(from_state) && act_probs.containsKey(from_state)) {
+                                    def all_to_states = (exp_probs[from_state].keySet() + act_probs[from_state].keySet()).unique().sort()
+                                    all_to_states.each { to_state ->
+                                        if (exp_probs[from_state].containsKey(to_state) && act_probs[from_state].containsKey(to_state)) {
+                                            if (Math.abs(act_probs[from_state][to_state] - exp_probs[from_state][to_state]) > epsilon) {
+                                                tr {
+                                                    td from_state
+                                                    td to_state
+                                                    td (exp_probs[from_state][to_state])
+                                                    td (act_probs[from_state][to_state])
+                                                }
+                                            }
+                                        } else {
+                                            tr {
+                                                td from_state
+                                                td to_state
+                                                td (exp_probs[from_state].containsKey(to_state) ? exp_probs[from_state][to_state] : '-missing-')
+                                                td (act_probs[from_state].containsKey(to_state) ? act_probs[from_state][to_state] : '-missing-')
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    tr {
+                                        td from_state
+                                        td "-transitions-"
+                                        td (exp_probs.containsKey(from_state) ? "${exp_probs[from_state].size()} states" : '-missing-')
+                                        td (act_probs.containsKey(from_state) ? "${act_probs[from_state].size()} states" : '-missing-')
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     def compare_hmm = { exp_hmm, act_hmm ->
-                        h4 "To Do"
+                        ['trans', 'emiss'].each { section_name ->
+                            h3 "$section_name probabilities"
+                            compare_hmm_probs(section_name, exp_hmm[section_name], act_hmm[section_name])
+                        }
                     }
 
                     def hmm_file = new File(temp_dir, output_name)
@@ -264,25 +309,27 @@ report_file.withWriter {
                              , hmm_file.absolutePath] + arguments
                             , pos_in_file, create_bigram_out_file, create_bigram_err_file)
 
-                    def gold_hmm_file = new File(gold_files_dir, inventory_by_name[output_name].gold)
-                    def gold_hmm = load_hmm(gold_hmm_file)
-                    def test_hmm = load_hmm(hmm_file)
+                    if (inventory_by_name[output_name].gold) {
+                        def gold_hmm_file = new File(gold_files_dir, inventory_by_name[output_name].gold)
+                        def gold_hmm = load_hmm(gold_hmm_file)
+                        def test_hmm = load_hmm(hmm_file)
 
-                    pre "Gold model file       : ${gold_hmm_file.path}"
-                    pre "Calculated model file : ${hmm_file.path}"
+                        pre "Gold model file       : ${gold_hmm_file.path}"
+                        pre "Calculated model file : ${hmm_file.path}"
 
-                    if (gold_hmm) {
-                        if (test_hmm) {
-                            h3 "Comparing gold to model from run"
-                            compare_hmm(gold_hmm, test_hmm)
+                        if (gold_hmm) {
+                            if (test_hmm) {
+                                h3 "Comparing gold to model from run"
+                                compare_hmm(gold_hmm, test_hmm)
 
-                            h3 "Comparing submission to model from run"
-                            compare_hmm(gold_hmm, test_hmm)
+                                h3 "Comparing submission to model from run"
+                                compare_hmm(gold_hmm, test_hmm)
+                            } else {
+                                h3 "COULDN'T LOAD MODEL FROM RUN"
+                            }
                         } else {
-                            h3 "COULDN'T LOAD MODEL FROM RUN"
+                            h3 "COULDN'T LOAD GOLD MODEL!!!"
                         }
-                    } else {
-                        h3 "COULDN'T LOAD GOLD MODEL!!!"
                     }
                 }
             }
@@ -296,8 +343,8 @@ report_file.withWriter {
                 def unk_prob_file = new File("/dropbox/13-14/570/hw6/examples/unk_prob_sec22")
 
                 check_create_hmm('create_bigram_hmm', 'bigram_hmm', pos_in_file, [])
-                check_create_hmm('create_trigram_hmm', 'trigram_hmm_118', pos_in_file, ['0.1', '0.1', '0.8', unk_prob_file.path])
-                check_create_hmm('create_trigram_hmm', 'trigram_hmm_235', pos_in_file, ['0.2', '0.3', '0.5', unk_prob_file.path])
+//                check_create_hmm('create_trigram_hmm', 'trigram_hmm_118', pos_in_file, ['0.1', '0.1', '0.8', unk_prob_file.path])
+//                check_create_hmm('create_trigram_hmm', 'trigram_hmm_235', pos_in_file, ['0.2', '0.3', '0.5', unk_prob_file.path])
 
             } else {
                 h2 "Required file(s) Missing!"
@@ -328,8 +375,8 @@ def take_inventory(File content_dir)
         check_item(name:'create_bigram_hmm', path:'create_2gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'create_trigram_hmm', path:'create_3gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'check_hmm', path:'check_hmm.sh', required:true, dir:content_dir)
-        , check_item(name:'trigram_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'3g_hmm_0.1_0.1_0.8.txt', required:false, dir:output_dir)
-        , check_item(name:'trigram_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?/, gold:'3g_hmm_0.2_0.3_0.5.txt', required:false, dir:output_dir)
+        , check_item(name:'trigram_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'wsj.3g_hmm_0.1_0.1_0.8', required:false, dir:output_dir)
+        , check_item(name:'trigram_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?//*, gold:'wsj.3g_hmm_0.2_0.3_0.5'*/, required:false, dir:output_dir)
         , check_item(name:'bigram_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'2g_hmm.txt', required:false, dir:output_dir)
         , check_item(name:'README', path:~/(?i)hw6\.(txt|pdf)/, required:false, dir:content_dir)
     ]
