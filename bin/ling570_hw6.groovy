@@ -377,7 +377,7 @@ def take_inventory(File content_dir)
         , check_item(name:'check_hmm', path:'check_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'trigram_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'wsj.3g_hmm_0.1_0.1_0.8', required:false, dir:output_dir)
         , check_item(name:'trigram_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?//*, gold:'wsj.3g_hmm_0.2_0.3_0.5'*/, required:false, dir:output_dir)
-        , check_item(name:'bigram_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'2g_hmm.txt', required:false, dir:output_dir)
+        , check_item(name:'bigram_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'wsj.2g_hmm', required:false, dir:output_dir)
         , check_item(name:'README', path:~/(?i)hw6\.(txt|pdf)/, required:false, dir:content_dir)
     ]
 }
