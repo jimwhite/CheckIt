@@ -128,10 +128,15 @@ report_file.withWriter {
                         }
                     }
 
-                    def check_section = { Map headers, SectionReader lm_file_reader, String name, String delimiter, Pattern pattern ->
+                    //  final TOTAL_KEY = " <TOTAL> "
+
+                    def load_section = { Map headers, SectionReader lm_file_reader, String name, String delimiter, Pattern pattern ->
                         def count = 0
-                        def stateProbs = [:]
-                        def epsilon = 1.0e-6
+                        def stateProbs = [:]   // .withDefault { [(TOTAL_KEY):0] }
+                        def epsilon = 1.0e-4
+
+                        def minLogRatio = null
+                        def maxLogRatio = null
 
                         lm_file_reader.findSection('\\' + delimiter)
 
@@ -140,21 +145,46 @@ report_file.withWriter {
                         while ((line = lm_file_reader.readLine()) != null) {
                             line = line.trim()
                             if (line) {
-                                def (_, state, prob) = (pattern.matcher(line))[0]
-                                stateProbs[state] = (stateProbs[state] ?: 0) + (prob as BigDecimal)
-                                count += 1
+//                                def groups = (pattern.matcher(line))[0]
+                                if (pattern.matcher(line).matches()) {
+                                    def (_, from_state, to_state, prob, logProb) = (pattern.matcher(line))[0]
+                                    prob = prob as BigDecimal
+                                    logProb = logProb as Double
+
+                                    if (!stateProbs.containsKey(from_state)) { stateProbs[from_state] = [:] }
+                                    stateProbs[from_state][to_state] = prob
+                                    // stateProbs[from_state][TOTAL_KEY] += prob
+                                    count += 1
+
+                                    def logRatio = Math.log(prob) / logProb
+                                    if (!logRatio.isNaN()) {
+                                        if (minLogRatio == null || logRatio < minLogRatio)  minLogRatio = logRatio
+                                        if (logRatio > maxLogRatio)  maxLogRatio = logRatio
+                                    }
+                                } else {
+                                    h3 "Badly formatted line"
+                                    pre line
+                                }
                             }
                         }
 
+                        if (maxLogRatio && minLogRatio && ((maxLogRatio - minLogRatio) > epsilon)) {
+                            h3 "LogProb base has wide range $minLogRatio to $maxLogRatio"
+                        }
+
+/*
                         stateProbs.each { String state, Number prob ->
                             if ((prob != 1) && ((prob < 1-epsilon) || (prob > 1+epsilon))) {
                                 pre "Bad $delimiter probabilities: state $state: sum to ${String.format('%f', prob)}"
                             }
                         }
+*/
 
                         if (headers[name] != count) {
                             pre "Mismatched header count for $name: header value ${headers[name]}: actual count $count"
                         }
+
+                        stateProbs
                     }
 
                     def check_symbol_count = { Map headers, File hmm_model_file ->
@@ -213,9 +243,9 @@ report_file.withWriter {
                             pre "Missing header $it"
                         }
 
-                        def init_probs = check_section(headers, lm_file_reader, 'init_line_num', 'init', ~/^(\S+)\s+(\S+)/)
-                        def trans_probs = check_section(headers, lm_file_reader, 'trans_line_num', 'transition', ~/^(\S+)\s+\S+\s+(\S+)/)
-                        def emiss_probs = check_section(headers, lm_file_reader, 'emiss_line_num', 'emission', ~/^(\S+)\s+\S+\s+(\S+)/)
+                        def init_probs = load_section(headers, lm_file_reader, 'init_line_num', 'init', ~/^(\S++)(\s++)(\S++)\s++(\S++).*/)
+                        def trans_probs = load_section(headers, lm_file_reader, 'trans_line_num', 'transition', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
+                        def emiss_probs = load_section(headers, lm_file_reader, 'emiss_line_num', 'emission', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
 
                         check_symbol_count(headers, hmm_model_file)
 
@@ -298,9 +328,9 @@ def take_inventory(File content_dir)
         check_item(name:'create_bigram_hmm', path:'create_2gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'create_trigram_hmm', path:'create_3gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'check_hmm', path:'check_hmm.sh', required:true, dir:content_dir)
-        , check_item(name:'trigram_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'1.3g_hmm_0.1_0.1_0.8', required:false, dir:output_dir)
-        , check_item(name:'trigram_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?/, gold:'1.3g_hmm_0.2_0.3_0.5', required:false, dir:output_dir)
-        , check_item(name:'bigram_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'1.2g_hmm', required:false, dir:output_dir)
+        , check_item(name:'trigram_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'3g_hmm_0.1_0.1_0.8.txt', required:false, dir:output_dir)
+        , check_item(name:'trigram_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?/, gold:'3g_hmm_0.2_0.3_0.5.txt', required:false, dir:output_dir)
+        , check_item(name:'bigram_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'2g_hmm.txt', required:false, dir:output_dir)
         , check_item(name:'README', path:~/(?i)hw6\.(txt|pdf)/, required:false, dir:content_dir)
     ]
 }
@@ -403,8 +433,6 @@ File unpack_it(File tar_file, File temp_dir, def html)
         content_dir
     }
 }
-
-System.out.withWriter { it.print report_file.text }
 
 // A filter for BufferedReader that will detect when we enter and exit ARPA file sections.
 class SectionReader extends BufferedReader
