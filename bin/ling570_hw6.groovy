@@ -18,15 +18,17 @@ def gold_files_dir = new File(home_dir, 'l570/hw6')
 
 def content_dir = new File(args[0])
 
-def checkit_dir = new File('project1')
+def checkit_dir = new File('checker')
 
 checkit_dir.mkdirs()
 
-def tar_file = File.createTempFile(project_id + '_', '', new File('.'))
+//def tar_file = File.createTempFile(project_id + '_', '', new File('.'))
 
-def temp_dir = new File(checkit_dir, tar_file.name + '.dir')
+//def temp_dir = new File(checkit_dir, tar_file.name + '.dir')
 
-temp_dir.mkdirs()
+//temp_dir.mkdirs()
+
+def temp_dir = checkit_dir
 
 def report_file = new File(temp_dir, 'report.html')
 
@@ -38,8 +40,8 @@ report_file.withWriter {
 
         p System.getProperty('user.dir')
 
-        h2 'Environment'
-        pre environment.join('\n')
+//        h2 'Environment'
+//        pre environment.join('\n')
 
         if (content_dir) {
             h2 "Contents"
@@ -80,7 +82,7 @@ report_file.withWriter {
 
                     def run_it = { List<String> command, File inFile, File outFile, File errFile ->
                         p {
-                            pre command.join(' ')
+                            pre ">${command.join(' ')} <${inFile.path}"
                         }
 
                         def exitValue
@@ -236,14 +238,6 @@ report_file.withWriter {
                             }
                         }
 
-                        p headers
-
-                        def missingHeaders = ['state_num', 'sym_num', 'init_line_num', 'trans_line_num', 'emiss_line_num'] - headers.keySet()
-
-                        missingHeaders.each {
-                            pre "Missing header $it"
-                        }
-
 //                        def init_probs = load_section(headers, lm_file_reader, 'init_line_num', 'init', ~/^(\S++)(\s++)(\S++)\s++(\S++).*/)
 //                        def trans_probs = load_section(headers, lm_file_reader, 'trans_line_num', 'transition', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
 //                        def emiss_probs = load_section(headers, lm_file_reader, 'emiss_line_num', 'emission', ~/^(\S++)\s++(\S++)\s++(\S++)\s++(\S++).*/)
@@ -252,6 +246,17 @@ report_file.withWriter {
                         def emiss_probs = load_section(headers, lm_file_reader, 'emiss_line_num', 'emission', ~/^(\S++)\s++(\S++)\s++(\S++)\s*+.*/)
 
                         check_symbol_count(headers, hmm_model_file)
+
+                        table {
+                            tr { headers.keySet().sort().each { td(it) } }
+                            tr { headers.keySet().sort().each { td(headers[it]) } }
+                        }
+
+                        def missingHeaders = ['state_num', 'sym_num', 'init_line_num', 'trans_line_num', 'emiss_line_num'] - headers.keySet()
+
+                        missingHeaders.each {
+                            pre "Missing header $it"
+                        }
 
                         [headers:headers, init:init_probs, trans:trans_probs, emiss:emiss_probs]
                     }
@@ -326,11 +331,11 @@ report_file.withWriter {
 
                     if (inventory_by_name[output_name].gold) {
                         def gold_hmm_file = new File(gold_files_dir, inventory_by_name[output_name].gold)
-                        def gold_hmm = load_hmm(gold_hmm_file)
-                        def test_hmm = load_hmm(hmm_file)
-
                         pre "Gold model file       : ${gold_hmm_file.path}"
+                        def gold_hmm = load_hmm(gold_hmm_file)
+
                         pre "Calculated model file : ${hmm_file.path}"
+                        def test_hmm = load_hmm(hmm_file)
 
                         if (gold_hmm) {
                             if (test_hmm) {
@@ -357,9 +362,9 @@ report_file.withWriter {
                 def pos_in_file = new File("/dropbox/13-14/570/hw6/examples/wsj_sec0.word_pos")
                 def unk_prob_file = new File("/dropbox/13-14/570/hw6/examples/unk_prob_sec22")
 
-                check_create_hmm('create_bigram_hmm', 'bigram_hmm', pos_in_file, [])
-//                check_create_hmm('create_trigram_hmm', 'trigram_hmm_118', pos_in_file, ['0.1', '0.1', '0.8', unk_prob_file.path])
-//                check_create_hmm('create_trigram_hmm', 'trigram_hmm_235', pos_in_file, ['0.2', '0.3', '0.5', unk_prob_file.path])
+                check_create_hmm('create_bigram_hmm', '2g_hmm', pos_in_file, [])
+//                check_create_hmm('create_trigram_hmm', '3g_hmm_118', pos_in_file, ['0.1', '0.1', '0.8', unk_prob_file.path])
+//                check_create_hmm('create_trigram_hmm', '3g_hmm_235', pos_in_file, ['0.2', '0.3', '0.5', unk_prob_file.path])
 
             } else {
                 h2 "Required file(s) Missing!"
@@ -390,9 +395,9 @@ def take_inventory(File content_dir)
         check_item(name:'create_bigram_hmm', path:'create_2gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'create_trigram_hmm', path:'create_3gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'check_hmm', path:'check_hmm.sh', required:true, dir:content_dir)
-        , check_item(name:'trigram_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'wsj.3g_hmm_0.1_0.1_0.8', required:false, dir:output_dir)
-        , check_item(name:'trigram_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?//*, gold:'wsj.3g_hmm_0.2_0.3_0.5'*/, required:false, dir:output_dir)
-        , check_item(name:'bigram_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'wsj.2g_hmm', required:false, dir:output_dir)
+        , check_item(name:'3g_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'wsj.3g_hmm_0.1_0.1_0.8', required:false, dir:output_dir)
+        , check_item(name:'3g_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?//*, gold:'wsj.3g_hmm_0.2_0.3_0.5'*/, required:false, dir:output_dir)
+        , check_item(name:'2g_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'wsj.2g_hmm', required:false, dir:output_dir)
         , check_item(name:'README', path:~/(?i)hw6\.(txt|pdf)/, required:false, dir:content_dir)
     ]
 }
