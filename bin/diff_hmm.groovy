@@ -1,5 +1,9 @@
 #!/usr/bin/env groovy
 
+@Grab(group='org.apache.commons', module='commons-lang3', version='3.1')
+
+import org.apache.commons.lang3.StringUtils
+
 import java.util.regex.Pattern
 
 // diff_hmm.groovy hmm_1 hmm_2
@@ -89,6 +93,30 @@ void diff_section(String section_name
 
     hmm_1_reader.findSection('\\' + section_name)
     hmm_2_reader.findSection('\\' + section_name)
+
+    // Get the alignment.
+    def from_states_1 = setToSortedArray(section_1_summary.from_states.keySet())
+    def from_states_2 = setToSortedArray(section_2_summary.from_states.keySet())
+    def from_states_alignment = alignText(from_states_1, from_states_2)
+
+//    def to_states_1 = setToSortedArray(section_1_summary.to_states)
+//    def to_states_2 = setToSortedArray(section_2_summary.to_states)
+//    def to_states_alignment = alignText(to_states_1, to_states_2)
+
+    // The length of the longest line in the source text.
+    def w = from_states_1*.length().max()
+
+    from_states_alignment.each { j, i ->
+        // The indicies in the alignment are one-based.  Zero means the empty string.
+        String s_j = j ? from_states_1[j-1] : "---"
+        String t_i = i ? from_states_2[i-1] : "---"
+
+        // Using a fixed width for the first (source) column.
+        // System.out.printf("%60s %4.2f %s\n", s_j, normalizedStringEditDistance(s_j, t_i), t_i)
+        // Better to use the length of the longest line in the source text.
+        printer.printf("%${w}s %4.2f %s\n", s_j, normalizedStringEditDistance(s_j, t_i), t_i)
+    }
+
 
     def row_1 = next_row(hmm_1_reader)
     def row_2 = next_row(hmm_2_reader)
@@ -203,6 +231,194 @@ def load_hmm_summary(File hmm_file)
 
     [headers:headers, init:init_summary, transition:trans_summary, emission:emiss_summary]
 }
+
+static String[] setToSortedArray(Set s)
+{
+//    m.keySet().sort().toArray(new String[m.keySet().size()])
+    String[] a = s.toArray(new String[s.size()])
+    Arrays.sort(a)
+    a
+}
+
+/**
+ * Compute the edit distances between a source of m elements and a target of n elements using dynamic programming.
+ *
+ * @param m the number of elements in the source.
+ * @param n the number of elements in the target
+ * @param copy_or_subst_cost a closure that takes two zero-based element indicies : source, target
+ *                           and returns the cost of replacing that source element with that target element
+ * @param insert_cost a closure that takes a zero-based target element index and returns the cost of inserting that target element
+ * @param delete_cost a closure that takes a zero-based source element index and returns the cost of deleting that source element
+ * @return a two-dimensional float array of m+1 rows and n+1 columns that contains the edit distance between the
+ *         corresponding source (row) and target (column) elements in terms of one-based indicies.
+ */
+static float[][] editDistances(int m, int n
+                               , Closure copy_or_subst_cost
+                               , Closure insert_cost = { 1 }
+                               , Closure delete_cost = { 1 })
+{
+    // Use float instead of double to save a bit of space
+    // since we don't need the additional range or resolution.
+    float[][] distance = new float[m+1][n+1]
+
+    // The Integer.times(Closure) function calls the closure the given
+    // number of times with an incrementing parameter that starts at zero.
+
+    n.times { i -> distance[0][i+1] = distance[0][i] + insert_cost(i) }
+    m.times { j -> distance[j+1][0] = distance[j][0] + delete_cost(j) }
+
+    n.times { i ->
+        m.times { j ->
+            distance[j+1][i+1] = [distance[j+1][i] + insert_cost(i),
+                    distance[j][i+1] + delete_cost(j),
+                    distance[j][i] + copy_or_subst_cost(j, i)].min()
+        }
+    }
+
+    distance
+}
+
+static float stringEditDistance(String s, String t) {
+//    editDistances(s.length(), t.length(), { int j, int i ->
+//        (s.charAt(j) == t.charAt(i)) ? 0 : 2
+//    })[s.length()][t.length()]
+
+    if (s == t) return 0
+
+//    int m = s.length()
+//    int n = t.length()
+//
+//    // Use float instead of double to save a bit of space
+//    // since we don't need the additional range or resolution.
+//    float[][] distance = new float[m+1][n+1]
+//
+//    // The Integer.times(Closure) function calls the closure the given
+//    // number of times with an incrementing parameter that starts at zero.
+//
+//    m.times { j -> distance[j+1][0] = distance[j][0] + 1 }
+//    n.times { i -> distance[0][i+1] = distance[0][i] + 1 }
+//
+//    n.times { i ->
+//        m.times { j ->
+//            distance[j+1][i+1] = [distance[j+1][i] + 1,
+//                    distance[j][i+1] + 1,
+//                    distance[j][i] + ((s.charAt(j) == t.charAt(i)) ? 0 : 2)].min()
+//        }
+//    }
+//
+//    distance[m][n]
+
+    StringUtils.getLevenshteinDistance(s, t)
+}
+
+static float normalizedStringEditDistance(String s, String t) {
+    int len = s.length() + t.length()
+    len > 0 ? stringEditDistance(s, t) / len : 0
+}
+
+static float[][] textEditDistances(String[] s, String[] t) {
+//    editDistances(s.length, t.length, { int j, int i ->
+//        s[j].equals(t[i]) ? 0 : (0.5 + normalizedStringEditDistance(s[j], t[i]))
+//    })
+
+    int m = s.length
+    int n = t.length
+
+    // Use float instead of double to save a bit of space
+    // since we don't need the additional range or resolution.
+    float[][] distance = new float[m+1][n+1]
+
+    // The Integer.times(Closure) function calls the closure the given
+    // number of times with an incrementing parameter that starts at zero.
+
+    m.times { j -> distance[j+1][0] = distance[j][0] + 1 }
+    n.times { i -> distance[0][i+1] = distance[0][i] + 1 }
+
+    n.times { i ->
+        m.times { j ->
+            distance[j+1][i+1] = [distance[j+1][i] + 1,
+                    distance[j][i+1] + 1,
+                    distance[j][i] + stringEditDistance(s[j], t[i])].min()
+//                    distance[j][i] + (0.5 + normalizedStringEditDistance(s[j], t[i]))].min()
+        }
+    }
+
+    distance
+}
+
+static float normalizedTextEditDistance(String[] s, String[] t)
+{
+    int len = s.length + t.length
+
+    if (len < 1) return 0
+
+    def d = textEditDistances(s, t)[s.length][t.length]
+
+    return (d / len)
+}
+
+/**
+ * Generate an alignment list for source and target given an edit distances array.
+ *
+ * @param distance Two-dimensional array of edit distances.
+ * @return A list of pairs of one-based indicies into the source (first element) and target (second element).
+ *         Zero means an empty element for an insert or delete.
+ */
+static List<List> align(float[][] distance)
+{
+    // A list of pairs of one-based indicies into the source (first element) and target (second element).
+    def alignment = []
+
+    // Start in the bottom right corner.
+    // That is the cell for edit distance between the final source and target elements.
+    int j = distance.length - 1;
+    int i = distance[0].length - 1;
+
+    // While we are at a distance between a source element and a target element...
+    while (j > 0 && i > 0) {
+        if ((distance[j-1][i-1] <= distance[j][i-1]) && (distance[j-1][i-1] <= distance[j-1][i])) {
+            // The diagonal (j-1, i-1) cell has the lowest value, so we're doing a copy or substitution.
+            alignment << [j--, i--]
+        } else if (distance[j][i-1] <= distance[j-1][i]) {
+            // The horizontal (j, i-1) cell has the lowest value, so we're doing an insertion.
+            alignment << [0, i--]
+        } else {
+            // The vertical (j-1, i) cell has the lowest value, so we're doing a deletion.
+            alignment << [j--, 0]
+        }
+    }
+
+    // Our position will not yet be at the origin if the last move wasn't diagonal (copy-or-subst).
+    // If our row is > 0 then we need to delete elements from the source.
+    while (j > 0) alignment << [j--, 0]
+    // If our column is > 0, then we need to insert elements from the target.
+    while (i > 0) alignment << [0, i--]
+
+    // The list of alignments is reversed from the order of the text, so put it in textual order.
+    alignment.reverse()
+}
+
+static List<List> alignText(String[] s, String[] t)
+{
+    if (s == t) {
+//        println "alignText shortcut!"
+        (1..s.length).collect { [it, it] }
+    } else {
+        align(textEditDistances(s, t))
+    }
+}
+
+/**
+ * List<List> to a two-dimensional array for the benefit of tests written in Java.
+ *
+ * @param alignment A list of lists of integers.
+ * @return a two-dimensional array, the inner array being int[]
+ */
+static Object[] alignmentToArray(List<List> alignment)
+{
+    alignment.collect { it.toArray(new int[it.size()]) }.toArray()
+}
+
 
 // A filter for BufferedReader that will detect when we enter and exit ARPA file sections.
 class SectionReader_diff_hmm extends BufferedReader
