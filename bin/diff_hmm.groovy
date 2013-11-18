@@ -11,8 +11,6 @@ hmm_2_reader.inSection = true
 
 def lines_to_show = 50
 
-def epsilon = 0.001
-
 System.out.withWriter {
     def printer = new PrintWriter(it)
 
@@ -46,9 +44,9 @@ System.out.withWriter {
                 printer.println "$section_name\t${row_1.join('\t')}\t|\t---"
                 row_1 = next_row(hmm_1_reader)
             } else {
-                if (row_1[0] != row_2[0]
-                        || row_1[1] != row_2[1]
-                        || (Math.abs((row_1[2] as BigDecimal) - (row_2[2] as BigDecimal)) > epsilon))
+                if (states_differ(row_1[0], row_2[0])
+                        || states_differ(row_1[1], row_2[1])
+                        || probs_differ(row_1[2], row_2[2]))
                 {
                     printer.println "$section_name\t${row_1.join('\t')}\t|\t${row_2.join('\t')}"
                 }
@@ -60,6 +58,22 @@ System.out.withWriter {
 
         printer.println()
     }
+}
+
+def states_differ(String state_1, String state_2)
+{
+    if (state_1 != state_2) {
+        def tags = state_1.split('_')
+        def f = state_2.startsWith(tags[0]) && state_2.endsWith(tags[1])
+        !f
+    } else {
+        false
+    }
+}
+
+def probs_differ(prob_1, prob_2)
+{
+    (Math.abs((prob_1 as Double) - (prob_2 as Double)) > 0.001)
 }
 
 def next_row(SectionReader_diff_hmm reader)
