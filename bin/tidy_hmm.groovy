@@ -24,7 +24,7 @@ def write_hmm_section(String section_name, Map<String, Map> probs, PrintWriter h
         def state_probs = probs[from_state]
         state_probs.keySet().sort().each { to_state ->
             def p = state_probs[to_state]
-            if (to_state)
+            if (to_state.trim())
                 hmm_printer.println "$from_state\t$to_state\t${p}\t${Math.log10(p)}"
             else
                 hmm_printer.println "$from_state\t${p}\t${Math.log10(p)}"
