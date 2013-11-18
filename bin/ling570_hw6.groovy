@@ -1,13 +1,11 @@
 #!/usr/bin/env /home2/jimwhite/Projects/Groovy/groovy-1.8.6/bin/groovy
 
-import groovy.xml.MarkupBuilder
+import groovy.xml.StreamingMarkupBuilder
 
 import java.util.regex.Pattern
 
 //environment = System.getenv().entrySet().grep { it.key =~ /PATH/ }.collect { it.key + '=' + it.value }
 environment = System.getenv().entrySet().collect { it.key + '=' + it.value }
-
-def MAX_WAIT_SECONDS = 300
 
 def submitter_id = "ling570"
 def project_id = "hw6"
@@ -22,18 +20,11 @@ def checkit_dir = new File('checker')
 
 checkit_dir.mkdirs()
 
-//def tar_file = File.createTempFile(project_id + '_', '', new File('.'))
-
-//def temp_dir = new File(checkit_dir, tar_file.name + '.dir')
-
-//temp_dir.mkdirs()
-
 def temp_dir = checkit_dir
 
-def report_file = new File(temp_dir, 'report.html')
-
-report_file.withWriter {
-    new MarkupBuilder(it).html {
+new File(checkit_dir, 'report.html').withWriter { report_writer ->
+    new StreamingMarkupBuilder().bind {
+    html {
         h1 "CheckIt! ${project_id} for ${submitter_id}"
 
         p(args as List)
@@ -90,8 +81,10 @@ report_file.withWriter {
                         outFile.withOutputStream { OutputStream stdout ->
                             errFile.withOutputStream { OutputStream stderr ->
                                 def proc = command.execute(environment, content_dir)
+                                proc.withWriter { stdin ->
+                                    inFile.withReader { stdin << it }
+                                }
                                 proc.consumeProcessOutput(stdout, stderr)
-                                proc.withWriter { it << inFile }
                                 proc.waitFor()
                                 exitValue = proc.exitValue()
                             }
@@ -363,7 +356,7 @@ report_file.withWriter {
                 def unk_prob_file = new File("/dropbox/13-14/570/hw6/examples/unk_prob_sec22")
 
                 check_create_hmm('create_bigram_hmm', '2g_hmm', pos_in_file, [])
-//                check_create_hmm('create_trigram_hmm', '3g_hmm_118', pos_in_file, ['0.1', '0.1', '0.8', unk_prob_file.path])
+                check_create_hmm('create_trigram_hmm', '3g_hmm_118', pos_in_file, ['0.1', '0.1', '0.8', unk_prob_file.path])
 //                check_create_hmm('create_trigram_hmm', '3g_hmm_235', pos_in_file, ['0.2', '0.3', '0.5', unk_prob_file.path])
 
             } else {
@@ -374,7 +367,9 @@ report_file.withWriter {
             h2 "No Content Found!"
         }
     }
+    }.writeTo(report_writer /* new PrintWriter(System.out) */)
 }
+
 
 def condor_get_variable(File condor_job, variable_name)
 {
@@ -395,7 +390,7 @@ def take_inventory(File content_dir)
         check_item(name:'create_bigram_hmm', path:'create_2gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'create_trigram_hmm', path:'create_3gram_hmm.sh', required:true, dir:content_dir)
         , check_item(name:'check_hmm', path:'check_hmm.sh', required:true, dir:content_dir)
-        , check_item(name:'3g_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?/, gold:'wsj.3g_hmm_0.1_0.1_0.8', required:false, dir:output_dir)
+        , check_item(name:'3g_hmm_118', path:~/(?i)3g_hmm_0\.1_0\.1_0\.8(\.txt)?//*, gold:'wsj.3g_hmm_0.1_0.1_0.8'*/, required:false, dir:output_dir)
         , check_item(name:'3g_hmm_235', path:~/(?i)3g_hmm_0\.2_0\.3_0\.5(\.txt)?//*, gold:'wsj.3g_hmm_0.2_0.3_0.5'*/, required:false, dir:output_dir)
         , check_item(name:'2g_hmm', path:~/(?i)2g_hmm(\.txt)?/, gold:'wsj.2g_hmm', required:false, dir:output_dir)
         , check_item(name:'README', path:~/(?i)hw6\.(txt|pdf)/, required:false, dir:content_dir)
