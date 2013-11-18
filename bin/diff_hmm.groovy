@@ -1,3 +1,4 @@
+#!/usr/bin/env groovy
 
 // diff_hmm.groovy hmm_1 hmm_2
 
