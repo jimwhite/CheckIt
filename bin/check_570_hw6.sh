@@ -20,7 +20,7 @@ diff_hmm.groovy ~/l570/hw6/tidy_wsj.3g_hmm_0.1_0.1_0.8 checker/tidy_3g_hmm_118 >
 diff_hmm.groovy ~/l570/hw6/tidy_jim.3g_hmm_0.1_0.1_0.8 checker/tidy_3g_hmm_118 >checker/diff_jim_3g_hmm_118.txt
 
 cd $1
-./create_2gram_hmm.sh ../checker/1b.2g_hmm <~/l570/hw6/1b.word_pos
+./create_2gram_hmm.sh <~/l570/hw6/1b.word_pos ../checker/1b.2g_hmm
 ./create_3gram_hmm.sh <~/l570/hw6/1b.word_pos ../checker/3g_1b_hmm 0.1 0.1 0.8 /dropbox/13-14/570/hw6/examples/unk_prob_sec22
 cd .. 
 
