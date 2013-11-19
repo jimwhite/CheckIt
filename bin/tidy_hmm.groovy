@@ -51,11 +51,16 @@ def load_section(Map headers, SectionReader_tidy_hmm lm_file_reader, String name
         if (line) {
             if (pattern.matcher(line).matches()) {
                 def (_, from_state, to_state, prob) = (pattern.matcher(line))[0]
-                prob = prob as BigDecimal
 
                 if (!stateProbs.containsKey(from_state)) { stateProbs[from_state] = [:] }
-                stateProbs[from_state][to_state] = prob
-                count += 1
+
+                try {
+                    prob = prob as BigDecimal
+                    stateProbs[from_state][to_state] = prob
+                    count += 1
+                } catch (NumberFormatException ex) {
+                    System.err.println "Bad number format: $line"
+                }
             }
         }
     }
@@ -101,6 +106,7 @@ def load_hmm_safe(Reader hmm_reader)
         load_hmm(hmm_reader)
     } catch (Exception ex) {
         System.err.println "Exception loading model file : ${ex.message}"
+        ex.printStackTrace()
         null
     }
 }
