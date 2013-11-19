@@ -71,17 +71,20 @@ void diff_section(String section_name
     , SectionReader_diff_hmm hmm_1_reader, SectionReader_diff_hmm hmm_2_reader
     , PrintWriter printer, Closure row_func)
 {
+    def epsilon = 1.0e-4
+
     printer.println "=== $section_name ==="
 
     def section_1_summary = hmm_1_summary[section_name]
     def section_2_summary = hmm_2_summary[section_name]
 
+    printer.print section_name
     section_1_summary.with {
-        printer.print "left\t${from_states.size()}\t${to_states.size()}\t${count}"
+        printer.print " left from_states=${from_states.size()} to_states=${to_states.size()} probs=${count}"
     }
-    printer.print "\t|\t"
+    printer.print "\t|"
     section_2_summary.with {
-        printer.print "right\t${from_states.size()}\t${to_states.size()}\t${count}"
+        printer.print " right from_states=${from_states.size()} to_states=${to_states.size()} probs=${count}"
     }
     printer.println()
 
@@ -103,6 +106,7 @@ void diff_section(String section_name
 //    def to_states_2 = setToSortedArray(section_2_summary.to_states)
 //    def to_states_alignment = alignText(to_states_1, to_states_2)
 
+/*
     // The length of the longest line in the source text.
     def w = from_states_1*.length().max()
 
@@ -116,23 +120,62 @@ void diff_section(String section_name
         // Better to use the length of the longest line in the source text.
         printer.printf("%${w}s %4.2f %s\n", s_j, normalizedStringEditDistance(s_j, t_i), t_i)
     }
-
-
+*/
     def row_1 = next_row(hmm_1_reader)
     def row_2 = next_row(hmm_2_reader)
 
-    while (row_1 != null || row_2 != null) {
-        if (row_1 == null) {
-            printer.println "$section_name\t  ---\t|\t${row_2.join('\t')}"
-            row_2 = next_row(hmm_2_reader)
-        } else if (row_2 == null) {
-            printer.println "$section_name\t${row_1.join('\t')}\t|\t---"
-            row_1 = next_row(hmm_1_reader)
-        } else {
-            row_func(row_1, row_2)
+    from_states_alignment.each { from_state_index_1, from_state_index_2 ->
+        // The indicies in the alignment are one-based.  Zero means the empty element.
+        if (from_state_index_1 > 0 && from_state_index_2 > 0) {
+            String from_state_1 = from_states_1[from_state_index_1 - 1]
+            String from_state_2 = from_states_2[from_state_index_2 - 1]
 
-            row_1 = next_row(hmm_1_reader)
-            row_2 = next_row(hmm_2_reader)
+            def from_state_info_1 = section_1_summary.from_states[from_state_1]
+            def from_state_info_2 = section_2_summary.from_states[from_state_2]
+
+            def total_prob_mismatch = Math.abs(from_state_info_1.total_prob - from_state_info_2.total_prob) > epsilon
+            def to_state_count_mismatch = from_state_info_1.to_state_count != from_state_info_2.to_state_count
+            if (total_prob_mismatch || to_state_count_mismatch)
+            {
+                printer.print "$section_name mismatch ${to_state_count_mismatch ? 'tsc' : '   '} ${total_prob_mismatch ? 'tp' : '  '} : "
+                printer.printf("\t%12s\t%4d\t%7.5f\t|\t%12s\t%4d\t%7.5f\n"
+                        , from_state_1, from_state_info_1.to_state_count, from_state_info_1.total_prob
+                        , from_state_2, from_state_info_2.to_state_count, from_state_info_2.total_prob)
+            }
+
+//            while (row_1 != null && row_1[0] != from_state_1) row_1 = next_row(hmm_1_reader)
+//            while (row_2 != null && row_2[0] != from_state_2) row_2 = next_row(hmm_2_reader)
+//
+//            while ((row_1 != null && row_1[0] == from_state_1) || (row_2 != null && row_2[0] == from_state_2)) {
+//                if (row_1 == null) {
+//                    printer.println "$section_name\t  ---\t|\t${row_2.join('\t')}"
+//                    row_2 = next_row(hmm_2_reader)
+//                } else if (row_2 == null) {
+//                    printer.println "$section_name\t${row_1.join('\t')}\t|\t---"
+//                    row_1 = next_row(hmm_1_reader)
+//                } else {
+//                    row_func(row_1, row_2)
+//
+//                    row_1 = next_row(hmm_1_reader)
+//                    row_2 = next_row(hmm_2_reader)
+//                }
+//            }
+        } else if (from_state_index_1 > 0) {
+            String from_state_1 = from_states_1[from_state_index_1 - 1]
+            def from_state_info_1 = section_1_summary.from_states[from_state_1]
+
+            printer.print "$section_name unmatched lhs : "
+            printer.printf("\t%12s\t%4d\t%7.5f\n"
+                    , from_state_1, from_state_info_1.to_state_count, from_state_info_1.total_prob)
+        } else if (from_state_index_2 > 0) {
+            String from_state_2 = from_states_2[from_state_index_2 - 1]
+            def from_state_info_2 = section_2_summary.from_states[from_state_2]
+
+            printer.print "$section_name unmatched rhs : "
+            printer.printf("\t\t\t\t\t|%12s\t%4d\t%7.5f\n"
+                    , from_state_2, from_state_info_2.to_state_count, from_state_info_2.total_prob)
+        } else {
+            System.err.println "Invalid alignment pair [0, 0]"
         }
     }
 }
@@ -158,7 +201,7 @@ def probs_differ(prob_1, prob_2)
     (Math.abs((prob_1 as Double) - (prob_2 as Double)) > 0.001)
 }
 
-def next_row(SectionReader_diff_hmm reader)
+String[] next_row(SectionReader_diff_hmm reader)
 {
     def row = reader.readLine()
 
