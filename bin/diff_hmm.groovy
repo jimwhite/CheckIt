@@ -64,7 +64,6 @@ void diff_hmm_files(File hmm_1_file, File hmm_2_file, PrintWriter printer)
         }
     }
 
-    printer.println()
     printer.println " === end report ==="
 }
 
