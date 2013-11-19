@@ -12,7 +12,7 @@ def hmm_1_file = new File(args[0])
 
 def hmm_2_file = new File(args[1])
 
-def lines_to_show = 50
+//println setToSortedArray((10..25).collect { it as String } as Set, 5)
 
 System.out.withWriter {
     it.withPrintWriter { printer ->
@@ -104,7 +104,10 @@ void diff_section(String section_name
 
 //    def to_states_1 = setToSortedArray(section_1_summary.to_states)
 //    def to_states_2 = setToSortedArray(section_2_summary.to_states)
-//    def to_states_alignment = alignText(to_states_1, to_states_2)
+//    def to_states_alignment = from_states_alignment
+//
+//    if (to_states_1 != from_states_1 || to_states_2 != from_states_2)
+//        to_states_alignment = alignText(to_states_1, to_states_2)
 
 /*
     // The length of the longest line in the source text.
@@ -138,14 +141,63 @@ void diff_section(String section_name
             if (total_prob_mismatch || to_state_count_mismatch)
             {
                 printer.print "$section_name mismatch ${to_state_count_mismatch ? 'tsc' : '   '} ${total_prob_mismatch ? 'tp' : '  '} : "
-                printer.printf("\t%12s\t%4d\t%7.5f\t|\t%12s\t%4d\t%7.5f\n"
+                printer.printf("\t%17s %4d %8.6f\t| %s %4d %8.6f\n"
                         , from_state_1, from_state_info_1.to_state_count, from_state_info_1.total_prob
                         , from_state_2, from_state_info_2.to_state_count, from_state_info_2.total_prob)
-            }
 
-//            while (row_1 != null && row_1[0] != from_state_1) row_1 = next_row(hmm_1_reader)
-//            while (row_2 != null && row_2[0] != from_state_2) row_2 = next_row(hmm_2_reader)
+                while (row_1 != null && row_1[0] != from_state_1) row_1 = next_row(hmm_1_reader)
+                def probs_1 = [:]
+                while (row_1 != null && row_1[0] == from_state_1) {
+                    probs_1[row_1[1]] = row_1[2] as Double
+                    row_1 = next_row(hmm_1_reader)
+                }
+
+                while (row_2 != null && row_2[0] != from_state_2) row_2 = next_row(hmm_2_reader)
+                def probs_2 = [:]
+                while (row_2 != null && row_2[0] == from_state_2) {
+                    probs_2[row_2[1]] = row_2[2] as Double
+                    row_2 = next_row(hmm_2_reader)
+                }
+
+                def to_states_1 = setToSortedArray(probs_1.keySet(), 4)
+                def to_states_2 = setToSortedArray(probs_2.keySet(), 4)
+                def to_states_alignment = alignText(to_states_1, to_states_2)
+
+//                if (to_states_2.length == 0) {
+//                    printer.println to_states_1
+//                    printer.println to_states_2
+//                    printer.println to_states_alignment
 //
+//                    printer.println "ick"
+//                }
+
+                to_states_alignment.each { to_state_index_1, to_state_index_2 ->
+                    if (to_state_index_1 > 0 && to_state_index_2 > 0) {
+                        def to_state_1 = to_states_1[to_state_index_1 - 1]
+                        def to_state_2 = to_states_2[to_state_index_2 - 1]
+                        printer.printf("\t%21s -> %-21s %8.6f\t| %21s -> %-21s %8.6f\n"
+                                , from_state_1, to_state_1, probs_1[to_state_1]
+                                , from_state_2, to_state_2, probs_2[to_state_2]
+                        )
+                    } else if (to_state_index_1 > 0) {
+                        def to_state_1 = to_states_1[to_state_index_1 - 1]
+                        printer.printf("\t%21s -> %-21s %8.6f\n"
+                                , from_state_1, to_state_1, probs_1[to_state_1]
+                        )
+                    } else if (to_state_index_2 > 0) {
+                        def to_state_2 = to_states_2[to_state_index_2 - 1]
+                        printer.printf("\t%49s\t| %21s -> %-21s %8.6f\n"
+                                , ""
+                                , from_state_2, to_state_2, probs_2[to_state_2]
+                        )
+
+                    } else {
+                        System.err.println "Invalid alignment pair [0, 0]"
+                    }
+                }
+
+                printer.println()
+
 //            while ((row_1 != null && row_1[0] == from_state_1) || (row_2 != null && row_2[0] == from_state_2)) {
 //                if (row_1 == null) {
 //                    printer.println "$section_name\t  ---\t|\t${row_2.join('\t')}"
@@ -160,6 +212,8 @@ void diff_section(String section_name
 //                    row_2 = next_row(hmm_2_reader)
 //                }
 //            }
+            }
+
         } else if (from_state_index_1 > 0) {
             String from_state_1 = from_states_1[from_state_index_1 - 1]
             def from_state_info_1 = section_1_summary.from_states[from_state_1]
@@ -280,6 +334,24 @@ static String[] setToSortedArray(Set s)
 //    m.keySet().sort().toArray(new String[m.keySet().size()])
     String[] a = s.toArray(new String[s.size()])
     Arrays.sort(a)
+    a
+}
+
+static String[] setToSortedArray(Set s, int max_part)
+{
+    String[] a = s.toArray(new String[s.size()])
+    Arrays.sort(a)
+
+    if (a.length > max_part * 3) {
+        String[] t = a
+        a = new String[max_part * 3]
+        max_part.times {
+            a[it] = t[it]
+            a[it + max_part] = t[(int) ((t.length - max_part) / 2) + it]
+            a[it + max_part + max_part] = t[t.length - (max_part - it)]
+        }
+    }
+
     a
 }
 
