@@ -1,4 +1,4 @@
-#!/usr/bin/env /home2/jimwhite/Projects/Groovy/groovy-1.8.6/bin/groovy
+#!/usr/bin/env groovy
 
 import groovy.xml.StreamingMarkupBuilder
 

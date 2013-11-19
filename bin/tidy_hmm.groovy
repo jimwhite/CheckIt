@@ -1,3 +1,5 @@
+#!/usr/bin/env groovy
+
 import java.util.regex.Pattern
 
 System.out.withWriter {
