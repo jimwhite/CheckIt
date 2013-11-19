@@ -25,7 +25,7 @@ cd $1
 cd .. 
 
 tidy_hmm.groovy <checker/1b.2g_hmm >checker/tidy_1b.2g_hmm
-diff_hmm.groovy checker/tidy_1b.2g_hmm ~/l570/hw6/tidy_jim.2g_1b_hmm >checker/diff_1b_2g_hmm.txt
+diff_hmm.groovy ~/l570/hw6/tidy_jim.2g_1b_hmm checker/tidy_1b.2g_hmm >checker/diff_1b_2g_hmm.txt
 
 tidy_hmm.groovy <checker/3g_1b_hmm >checker/tidy_3g_1b_hmm
 diff_hmm.groovy ~/l570/hw6/tidy_jim.3g_1b_hmm checker/tidy_3g_1b_hmm >checker/diff_3g_1b_hmm.txt
