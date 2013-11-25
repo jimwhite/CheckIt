@@ -250,6 +250,8 @@ report_file.withWriter {
                                         }
                                         if (!mismatches) {
                                             h4 "ALL LINES MATCHED!"
+                                        } else {
+                                            h4 "$mismatches of $line_count did not match."
                                         }
                                     } else {
                                         h4 "File does not exist!"
