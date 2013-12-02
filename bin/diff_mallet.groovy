@@ -87,11 +87,12 @@ def report_mismatch_details(Map data_1, Map data_2, def printer) {
     def mismatched_key_count = 0
     def mismatched_key_details = 10
     common_keys.each { key ->
-        if ((data_1[key] != data_2[key]) && (mismatched_key_details-- > 0)) {
+        if (data_1[key] != data_2[key]) {
             mismatched_key_count += 1
-            printer.println "$key ${data_1[key]} != ${data_2[key]}"
+            if (mismatched_key_details-- > 0) printer.println "$key ${data_1[key]} != ${data_2[key]}"
         }
     }
+
     if (mismatched_key_count) {
         printer.println "${mismatched_key_count} mismatched values"
     }
