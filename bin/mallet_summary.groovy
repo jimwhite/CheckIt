@@ -33,6 +33,11 @@ void summarize_mallet_file(File data_file, def printer)
     printer.println "class_labels\t${labels.size()}\t${labels.take(12)}"
     def idents_by_label = labels_and_ids.groupBy { it.label }
 
+    printer.println "=== instance counts per label ==="
+    idents_by_label.keySet().sort().each { label ->
+        printer.println "$label\t${idents_by_label[label].size()}"
+    }
+
     printer.println "=== identifier sequencing per label ==="
     idents_by_label.keySet().sort().each { label ->
         def idents = idents_by_label[label]
