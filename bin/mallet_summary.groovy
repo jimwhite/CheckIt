@@ -44,10 +44,10 @@ void summarize_mallet_file(File data_file, def printer)
         if (idents.size() > 12) {
 //            printer.println "# Displaying first 6 and last 6 identifiers"
             idents = idents[0..5] + idents[-6..-1]
-            idents = idents.collect { (it =~ /^(?:.*[\\\/])*+(\d*+)\D*+$/)[0][1] }
+            idents = idents.collect { (it =~ /^(?:.*[\\\/])*(\d*+)\D*+$/)[0][1] }
             printer.println "$label\t${idents[0..5].join('\t')}\t... \t${idents[-6..-1].join('\t')}"
         } else {
-            idents = idents.collect { (it =~ /^(?:.*[\\\/])*+(\d*+)\D*+$/)[0][1] }
+            idents = idents.collect { (it =~ /^(?:.*[\\\/])*(\d*+)\D*+$/)[0][1] }
             printer.println "$label\t${idents.join('\t')}"
         }
     }
@@ -88,9 +88,10 @@ class mallet_summary_MALLET_Reader {
                     fields = (fields as List).drop(2)
                     if (fields.size() % 2 != 0) counts.bad_fields += 1
                     (fields.size() / 2).times {
+                        def k = fields[it * 2]
+                        def f = fields[(it * 2) + 1]
                         try {
-                            def k = fields[it * 2]
-                            def v = Math.round(fields[(it * 2) + 1] as Float)
+                            def v = Math.round(f as Float)
                             result[k] = v
 //                            if (v == null || all_features[k] == null) {
 //                                println "huh?"
@@ -101,6 +102,7 @@ class mallet_summary_MALLET_Reader {
 //                                println "huh?"
 //                            }
                         } catch (NumberFormatException ex) {
+                            System.err.println "Bad number: '$f' in $line"
                             counts.bad_numbers += 1
                         }
                     }
