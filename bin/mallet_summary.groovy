@@ -29,11 +29,28 @@ void summarize_mallet_file(File data_file, def printer)
     printer.println "data_rows\t${labels_and_ids.size()}"
 
     List labels = labels_and_ids.inject([labels_and_ids.head().label]) { a, v -> a[-1] == v.label ? a : a << v.label }
+    printer.println "# Displaying up to 12 class labels in the order they appear.  If a label is shown more than once then its data is not contiguous."
     printer.println "class_labels\t${labels.size()}\t${labels.take(12)}"
+    def idents_by_label = labels_and_ids.groupBy { it.label }
+
+    printer.println "=== identifier sequencing per label ==="
+    idents_by_label.keySet().sort().each { label ->
+        def idents = idents_by_label[label]
+        if (idents.size() > 12) {
+//            printer.println "# Displaying first 6 and last 6 identifiers"
+            idents = idents[0..5] + idents[-6..-1]
+            idents = idents.collect { (it =~ /^(?:.*[\\\/])*+(\d*+)\D*+$/)[0][1] }
+            printer.println "$label\t${idents[0..5].join('\t')}\t... \t${idents[-6..-1].join('\t')}"
+        } else {
+            idents = idents.collect { (it =~ /^(?:.*[\\\/])*+(\d*+)\D*+$/)[0][1] }
+            printer.println "$label\t${idents.join('\t')}"
+        }
+    }
 
     printer.println "=== features ==="
     Map all_features = data_reader.all_features
-    printer.println "features\t${all_features.size()}"
+    printer.println "total_number_of_features\t${all_features.size()}"
+    printer.println "sum_of_all_feature_values\t${all_features.values().sum()}"
     printer.println "=== first 25 features ==="
     all_features.keySet().sort().take(25).each { printer.println "$it\t${all_features[it]}"}
     printer.println "=== last 25 features ==="
