@@ -40,13 +40,14 @@ void summarize_mallet_file(File data_file, def printer)
 
     printer.println "=== identifier sequencing per label ==="
     idents_by_label.keySet().sort().each { label ->
-        def idents = idents_by_label[label]
+        def idents = idents_by_label[label].ident
         if (idents.size() > 12) {
 //            printer.println "# Displaying first 6 and last 6 identifiers"
             idents = idents[0..5] + idents[-6..-1]
-            idents = idents.collect { (it =~ /^(?:.*[\\\/])*(\d*+)\D*+$/)[0][1] }
+            idents = idents.collect { (it =~ /^(?:.*[\\\/])*+(\d*+)\D*+$/)[0][1] }
             printer.println "$label\t${idents[0..5].join('\t')}\t... \t${idents[-6..-1].join('\t')}"
         } else {
+            def m = idents[0] =~ /^(?:.*[\\\/])*+(\d*+)\D*+$/
             idents = idents.collect { (it =~ /^(?:.*[\\\/])*(\d*+)\D*+$/)[0][1] }
             printer.println "$label\t${idents.join('\t')}"
         }
